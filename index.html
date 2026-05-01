@@ -748,6 +748,7 @@
 
         function appendCatfishBarbelsToGeometry(geo, anchorCandidates, baseColor, accentColor) {
             const posAttr = geo.attributes.position;
+            const colorAttr = geo.attributes.color;
             const indices = Array.from(geo.index.array);
             const positions = Array.from(posAttr.array);
             const colors = Array.from(colorAttr.array);
@@ -1223,7 +1224,19 @@
             primitives: { head: HEAD_PRIMITIVES, side: SIDE_PRIMITIVES, dorsal: DORSAL_PRIMITIVES }
         };
 
-        function triggerMutation() { document.getElementById('loading').style.opacity = 1; setTimeout(() => { buildCreature(); document.getElementById('loading').style.opacity = 0; }, 50); }
+        function triggerMutation() {
+            const loading = document.getElementById('loading');
+            loading.style.opacity = 1;
+            setTimeout(() => {
+                try {
+                    buildCreature();
+                } catch (error) {
+                    console.error('生成失败:', error);
+                } finally {
+                    loading.style.opacity = 0;
+                }
+            }, 50);
+        }
         document.getElementById('btn-randomize').addEventListener('click', () => {
             const randomCodes = currentDNA.map(() => BASES[Math.floor(Math.random()*4)] + BASES[Math.floor(Math.random()*4)]);
             setDNAFromCodes(randomCodes, { immediate: false });
