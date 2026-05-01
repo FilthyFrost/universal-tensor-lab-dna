@@ -711,6 +711,100 @@
             return out;
         }
 
+        function appendCatfishBarbelsToGeometry(geo, anchorCandidates, baseColor, accentColor) {
+            const posAttr = geo.attributes.position;
+            const indices = Array.from(geo.index.array);
+            const positions = Array.from(posAttr.array);
+            const colors = Array.from(colorAttr.array);
+            const box = new THREE.Box3().setFromBufferAttribute(posAttr);
+            const size = new THREE.Vector3();
+            box.getSize(size);
+            const unit = Math.max(0.42, Math.min(0.68, Math.min(size.x, size.z) * 0.28));
+            const barbelColor = new THREE.Color(0x8a6f3a).lerp(accentColor, 0.28);
+            const rootColor = baseColor.clone().lerp(accentColor, 0.34);
+            const tubularSegments = 5;
+            const radialSegments = 4;
+            const rootRadius = 0.03;
+            const tipRadius = 0.007;
+
+            const chooseAnchorIndex = (sign) => {
+                const candidates = anchorCandidates.get(sign) || [];
+                if (!candidates.length) return -1;
+                candidates.sort((a, b) => a.score - b.score);
+                return candidates[0].idx;
+            };
+
+            const pushColor = (color) => {
+                colors.push(color.r, color.g, color.b);
+            };
+
+            for (let sign of [1, -1]) {
+                const anchorIndex = chooseAnchorIndex(sign);
+                if (anchorIndex < 0) continue;
+                const anchor = new THREE.Vector3(
+                    posAttr.getX(anchorIndex),
+                    posAttr.getY(anchorIndex),
+                    posAttr.getZ(anchorIndex)
+                );
+                const specs = [
+                    { side: 1.18, down: -0.1, forward: 0.58, curl: 0.12, lift: 0.04 },
+                    { side: 1.0, down: -0.24, forward: 0.48, curl: -0.08, lift: -0.02 },
+                    { side: 0.68, down: -0.38, forward: 0.3, curl: 0.06, lift: -0.08 }
+                ];
+
+                for (const spec of specs) {
+                    const root = anchor.clone().add(new THREE.Vector3(sign * unit * 0.02, -unit * 0.01, unit * 0.02));
+                    const mid = anchor.clone().add(new THREE.Vector3(sign * unit * spec.side * 0.48, unit * (spec.down * 0.52 + spec.lift), unit * spec.forward * 0.68));
+                    const tip = anchor.clone().add(new THREE.Vector3(sign * unit * spec.side, unit * spec.down, unit * spec.forward + spec.curl * unit));
+                    const curve = new THREE.CatmullRomCurve3([root, mid, tip]);
+                    const tube = new THREE.TubeGeometry(curve, tubularSegments, rootRadius, radialSegments, false);
+                    const tubePos = tube.attributes.position;
+                    const ringSize = radialSegments + 1;
+                    const offset = positions.length / 3;
+
+                    for (let ring = 0; ring <= tubularSegments; ring++) {
+                        const t = ring / tubularSegments;
+                        const center = curve.getPointAt(t);
+                        const taper = THREE.MathUtils.lerp(1, tipRadius / rootRadius, Math.pow(t, 0.72));
+                        const color = rootColor.clone().lerp(barbelColor, smoothStep(0.0, 0.82, t));
+                        for (let j = 0; j < ringSize; j++) {
+                            const idx = ring * ringSize + j;
+                            positions.push(
+                                center.x + (tubePos.getX(idx) - center.x) * taper,
+                                center.y + (tubePos.getY(idx) - center.y) * taper,
+                                center.z + (tubePos.getZ(idx) - center.z) * taper
+                            );
+                            pushColor(color);
+                        }
+                    }
+
+                    for (let i = 0; i < tube.index.count; i += 3) {
+                        indices.push(offset + tube.index.getX(i), offset + tube.index.getX(i + 1), offset + tube.index.getX(i + 2));
+                    }
+
+                    for (let j = 0; j < radialSegments; j++) {
+                        indices.push(anchorIndex, offset + j, offset + j + 1);
+                    }
+
+                    const tipCenterIndex = positions.length / 3;
+                    positions.push(tip.x, tip.y, tip.z);
+                    pushColor(barbelColor);
+                    const tipRing = offset + tubularSegments * ringSize;
+                    for (let j = 0; j < radialSegments; j++) {
+                        indices.push(tipCenterIndex, tipRing + j + 1, tipRing + j);
+                    }
+
+                    tube.dispose();
+                }
+            }
+
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geo.setIndex(indices);
+            geo.computeBoundingBox();
+            geo.computeBoundingSphere();
+        }
+
         function addFeatureMarkers(group, cHd, cSd, accentColor) {
             const darkMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.5, metalness: 0, wireframe: isWireframeMode });
 
@@ -721,49 +815,6 @@
                     n.position.set(sign * 0.1, -0.52, 1.55);
                     n.scale.set(1.1, 0.76, 0.5);
                     group.add(n);
-                }
-            }
-
-            if (cHd === 'CA') {
-                const barbelColor = new THREE.Color(0x8a6f3a).lerp(accentColor, 0.28);
-                const barbelMat = new THREE.MeshStandardMaterial({ color: barbelColor, roughness: 0.82, metalness: 0, wireframe: isWireframeMode });
-                const makeTaperedBarbel = (points, rootRadius = 0.034, tipRadius = 0.01) => {
-                    const tubularSegments = 6;
-                    const radialSegments = 5;
-                    const curve = new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(p[0], p[1], p[2])));
-                    const geo = new THREE.TubeGeometry(curve, tubularSegments, rootRadius, radialSegments, false);
-                    const pos = geo.attributes.position;
-                    const ringSize = radialSegments + 1;
-                    for (let ring = 0; ring <= tubularSegments; ring++) {
-                        const t = ring / tubularSegments;
-                        const center = curve.getPointAt(t);
-                        const scale = THREE.MathUtils.lerp(1, tipRadius / rootRadius, Math.pow(t, 0.75));
-                        for (let j = 0; j < ringSize; j++) {
-                            const idx = ring * ringSize + j;
-                            pos.setXYZ(
-                                idx,
-                                center.x + (pos.getX(idx) - center.x) * scale,
-                                center.y + (pos.getY(idx) - center.y) * scale,
-                                center.z + (pos.getZ(idx) - center.z) * scale
-                            );
-                        }
-                    }
-                    pos.needsUpdate = true;
-                    geo.computeVertexNormals();
-                    return new THREE.Mesh(geo, barbelMat);
-                };
-
-                for (let sign of [1, -1]) {
-                    const specs = [
-                        [[sign * 0.2, 0.0, 0.98], [sign * 0.62, -0.05, 1.22], [sign * 1.1, -0.12, 1.42]],
-                        [[sign * 0.24, -0.08, 1.0], [sign * 0.58, -0.17, 1.17], [sign * 0.98, -0.24, 1.32]],
-                        [[sign * 0.16, -0.17, 0.94], [sign * 0.38, -0.24, 1.04], [sign * 0.7, -0.285, 1.14]]
-                    ];
-                    for (const points of specs) {
-                        const barbel = makeTaperedBarbel(points);
-                        barbel.castShadow = true;
-                        group.add(barbel);
-                    }
                 }
             }
 
@@ -890,13 +941,14 @@
             }
             
             const geo = new THREE.SphereGeometry(1.0, wSegments, hSegments); 
-            const pos = geo.attributes.position;
+            let pos = geo.attributes.position;
             const colors = new Float32Array(pos.count * 3);
             geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
             
             const eyeOrigin = new THREE.Vector3(0.35, 0.15, 0.85);
             const blushOrigin = new THREE.Vector3(0.45, -0.05, 0.75);
             let leftEyeIdx = -1, rightEyeIdx = -1, leftEyeDist = 999, rightEyeDist = 999;
+            const catfishAnchorCandidates = new Map([[1, []], [-1, []]]);
 
             for(let i=0; i<pos.count; i++) {
                 let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
@@ -917,6 +969,14 @@
                 // 1. 头部语义蓝图：用不同轮廓程序替代统一拉伸参数。
                 let headField = applyHeadBlueprint(x, y, z, cHd, headParams);
                 baseX += headField.dx; baseY += headField.dy; baseZ += headField.dz; disp = Math.max(disp, headField.disp);
+
+                if (cHd === 'CA' && z > 0.52 && y < 0.26 && y > -0.58) {
+                    for (let sign of [1, -1]) {
+                        if (sign * x < 0.02) continue;
+                        const score = ((x - sign * 0.24) / 0.22) ** 2 + ((y + 0.13) / 0.32) ** 2 + ((z - 0.86) / 0.22) ** 2;
+                        catfishAnchorCandidates.get(sign).push({ idx: i, score });
+                    }
+                }
 
                 // 2. 侧翼语义蓝图：蝙蝠膜、蝴蝶瓣、叶片、螺旋侧角分开处理。
                 let sideField = applySideBlueprint(x, y, z, cSd, sideParams, cHd);
@@ -988,6 +1048,11 @@
                 if (bMix > 0) { r += (0.95-r)*bMix; g += (0.3-g)*bMix; b += (0.5-b)*bMix; }
                 
                 colors[i*3] = r; colors[i*3+1] = g; colors[i*3+2] = b;
+            }
+
+            if (cHd === 'CA') {
+                appendCatfishBarbelsToGeometry(geo, catfishAnchorCandidates, baseColor, accentColor);
+                pos = geo.attributes.position;
             }
 
             geo.computeVertexNormals();
