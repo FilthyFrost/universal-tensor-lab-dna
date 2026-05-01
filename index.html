@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>万向张量大图鉴 v27.0 (Silhouette-First Lab)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Nunito', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background 0.8s ease; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        
+        #stats-layer {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(255, 255, 255, 0.9); padding: 15px 25px;
+            border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            font-size: 14px; font-weight: 900; color: #334155;
+            border: 3px solid #cbd5e1; backdrop-filter: blur(10px);
+            z-index: 50; display: flex; flex-direction: column; gap: 6px;
+            transition: border-color 0.5s;
+        }
+
+        #ui-layer {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95); padding: 20px 30px;
+            border-radius: 40px; box-shadow: 0 15px 40px rgba(0,0,0,0.15), inset 0 -4px 0 rgba(0,0,0,0.05);
+            text-align: center; border: 5px solid #94a3b8; transition: border-color 0.5s;
+            user-select: none; width: 95%; max-width: 1050px;
+        }
+        h1 { margin: 0 0 10px 0; font-size: 22px; color: #334155; font-weight: 900; letter-spacing: 1px; }
+        
+        .dna-board { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 15px; }
+        .gene-block {
+            display: flex; flex-direction: column; align-items: center; width: 110px;
+            background: #f1f5f9; padding: 6px 5px; border-radius: 16px;
+            border: 2px solid #e2e8f0; transition: transform 0.2s;
+        }
+        .gene-label { font-size: 10px; color: #64748b; font-weight: 900; margin-bottom: 4px; text-transform: uppercase;}
+        .trait-name { font-size: 11px; color: #0284c7; font-weight: 900; margin-top: 4px; height: 14px; text-align: center;}
+        
+        .base-pairs { display: flex; gap: 3px; }
+        .base {
+            width: 26px; height: 30px; display: flex; align-items: center; justify-content: center;
+            font-size: 15px; font-weight: 900; border-radius: 6px; cursor: pointer;
+            transition: all 0.2s; color: white; box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+        }
+        .base:active { transform: translateY(4px); box-shadow: none; }
+        
+        .base-A { background: #e11d48; } .base-T { background: #0284c7; }
+        .base-C { background: #16a34a; } .base-G { background: #d97706; }
+
+        .btn-group { display: flex; justify-content: center; gap: 15px; align-items: center; margin-top: 10px;}
+        .btn-random {
+            background: #334155; color: #f8fafc; border: 3px solid #475569; padding: 12px 35px;
+            font-size: 16px; font-weight: 900; border-radius: 30px; cursor: pointer;
+            box-shadow: 0 6px 0 #0f172a; transition: all 0.1s; 
+        }
+        .btn-random:active { transform: translateY(6px); box-shadow: 0 0 0 #0f172a; }
+        .btn-toggle {
+            background: #cbd5e1; color: #334155; border: 3px solid #94a3b8; padding: 12px 20px;
+            font-size: 14px; font-weight: 900; border-radius: 30px; cursor: pointer;
+        }
+        .btn-toggle.active { background: #16a34a; color: white; border-color: #bbf7d0; }
+        .btn-download {
+            background: #fcd34d; color: #854d0e; border: 3px solid #fef08a; padding: 12px 20px;
+            font-size: 14px; font-weight: 900; border-radius: 30px; cursor: pointer;
+            box-shadow: 0 6px 0 #ca8a04;
+        }
+
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 22px; color: #334155; font-weight: 900;
+            background: #ffffff; padding: 30px 60px; border-radius: 40px; 
+            border: 6px solid #cbd5e1; z-index: 100; pointer-events: none; transition: opacity 0.3s;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="stats-layer">
+        <div><span id="type-icon" style="font-size: 20px;">🧪</span> 实验代号: <span id="type-indicator" style="font-weight:900; font-size: 18px;">生成中...</span></div>
+        <div style="font-size: 12px; color: #64748b;">16x16 万向张量阵列 (Universal Tensor Array)</div>
+        <div style="font-size: 12px; color: #64748b;">自适应面数: <span id="poly-count" style="font-weight:bold; color: #16a34a;">0</span></div>
+    </div>
+
+    <div id="loading">🧬 解锁 16 种极端变异...</div>
+    <div id="canvas-container"></div>
+    
+    <div id="ui-layer" id="ui-box">
+        <h1>✨ Universal Tensor Lab v27.0</h1>
+        <div class="dna-board" id="dna-board"></div>
+        <div class="btn-group">
+            <button class="btn-random" id="btn-randomize">🧬 随机科学实验</button>
+            <button class="btn-toggle" id="btn-wireframe">🕸️ 拓扑剖析</button>
+            <button class="btn-download" id="btn-download">💾 提取实验体</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+        import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+        const BASES = ['A', 'T', 'C', 'G'];
+        
+        let currentDNA = [
+            ['A', 'C'], // 0. Element/Palette
+            ['T', 'A'], // 1. Chassis (Body Shape)
+            ['G', 'C'], // 2. Head Tensor
+            ['C', 'T'], // 3. Side Tensor
+            ['A', 'G'], // 4. Dorsal Tensor
+            ['T', 'C']  // 5. Skin Pattern
+        ];
+
+        const GENE_NAMES = ["Element", "Chassis", "Head Tensor", "Side Tensor", "Dorsal Tensor", "Pattern"];
+
+        // =====================================================================
+        // 🧪 终极科学实验：16种形态的绝对解绑字典！(The 16-State Dictionary)
+        // params: ox, oy, oz (锚点), rad (半径), pow (尖锐度), sx, sy, sz (各向拉伸), cav (内凹腔体), tw (螺旋扭曲), wv (高频波), dr (下垂重力), blb (尖端圆球)
+        // =====================================================================
+
+        const HEAD_TENSORS = {
+            'AA': { n: '米老鼠耳', ox: 0.35, oy: 0.6, oz: 0.6, rad: 0.35, pow: 1.2, sx: 1.5, sy: 1.6, sz: -0.8, cav: 0.4, tw: 0, wv: 0, dr: 0, blb: 0 },
+            'AT': { n: '六角恐龙鳃', ox: 0.4, oy: 0.4, oz: 0.4, rad: 0.35, pow: 1.8, sx: 1.8, sy: 0.2, sz: -0.5, cav: 0, tw: 0, wv: 8.0, dr: 0, blb: 0 }, 
+            'AC': { n: '超长兔耳',  ox: 0.3, oy: 0.6, oz: 0.5, rad: 0.3, pow: 1.5, sx: 0.3, sy: 2.5, sz: -0.5, cav: 0.2, tw: 0, wv: 0, dr: 1.2, blb: 0 },
+            'AG': { n: '恶魔尖角', ox: 0.3, oy: 0.5, oz: 0.7, rad: 0.25, pow: 2.0, sx: 0.4, sy: 1.8, sz: 0.5, cav: 0, tw: 0, wv: 0, dr: -0.8, blb: 0 }, 
+            'TA': { n: '螺旋花朵', ox: 0.35, oy: 0.6, oz: 0.6, rad: 0.35, pow: 1.3, sx: 0.2, sy: 1.8, sz: 0.2, cav: 0, tw: 4.0, wv: 5.0, dr: 0, blb: 0 },
+            'TT': { n: '多叉皇冠', ox: 0.25, oy: 0.7, oz: 0.4, rad: 0.4, pow: 1.5, sx: 0.8, sy: 1.5, sz: 0.8, cav: 0, tw: 0, wv: 10.0, dr: 0, blb: 0 },
+            'TC': { n: '外星人触角', ox: 0.25, oy: 0.6, oz: 0.6, rad: 0.18, pow: 1.8, sx: 0.2, sy: 2.5, sz: 0.2, cav: 0, tw: 0, wv: 0, dr: 0.2, blb: 1.2 }, 
+            'TG': { n: '摇曳火苗', ox: 0.3, oy: 0.6, oz: 0.6, rad: 0.35, pow: 2.5, sx: 0.2, sy: 2.2, sz: 0, cav: 0, tw: 0, wv: 15.0, dr: 0, blb: 0 },
+            'CA': { n: '长垂胡须', ox: 0.45, oy: 0.2, oz: 0.8, rad: 0.2, pow: 1.5, sx: 2.5, sy: 0.2, sz: 0.2, cav: 0, tw: 0, wv: 0, dr: 1.5, blb: 0 },
+            'CT': { n: '大脑沟壑', ox: 0.3, oy: 0.7, oz: 0.5, rad: 0.4, pow: 1.2, sx: 1.0, sy: 1.0, sz: 1.0, cav: 0, tw: 0, wv: 18.0, dr: 0, blb: 0 },
+            'CC': { n: '厚实猫耳', ox: 0.35, oy: 0.6, oz: 0.6, rad: 0.3, pow: 1.2, sx: 1.0, sy: 1.0, sz: -0.2, cav: 0.3, tw: 0, wv: 0, dr: 0, blb: 0 },
+            'CG': { n: '水晶锐角', ox: 0.25, oy: 0.6, oz: 0.6, rad: 0.25, pow: 3.5, sx: 0.5, sy: 2.0, sz: 0.5, cav: 0, tw: 0, wv: 0, dr: 0, blb: 0 }, 
+            'GA': { n: '下垂猎犬耳', ox: 0.4, oy: 0.5, oz: 0.5, rad: 0.35, pow: 1.2, sx: 1.2, sy: 0.2, sz: -0.5, cav: 0.1, tw: 0, wv: 0, dr: 2.5, blb: 0 },
+            'GT': { n: '蛾子羽角', ox: 0.3, oy: 0.6, oz: 0.6, rad: 0.35, pow: 1.2, sx: 1.5, sy: 1.5, sz: -0.8, cav: 0, tw: 0, wv: 25.0, dr: 0, blb: 0 }, 
+            'GC': { n: '大象弯鼻', ox: 0.2, oy: 0.4, oz: 0.8, rad: 0.25, pow: 1.5, sx: 0.2, sy: 0.2, sz: 2.5, cav: 0, tw: 0, wv: 0, dr: 1.5, blb: 0 },
+            'GG': { n: '锤头鲨横骨', ox: 0.5, oy: 0.5, oz: 0.7, rad: 0.3, pow: 1.2, sx: 2.5, sy: 0.4, sz: 0.4, cav: 0, tw: 0, wv: 0, dr: 0, blb: 0 }
+        };
+
+        const SIDE_TENSORS = {
+            'AA': { n: '无侧翼', ox: 0, oy: 0, oz: 0, rad: 0, pow: 1, sx: 0, sy: 0, sz: 0, web: 0, twist: 0 },
+            'AT': { n: '蝙蝠小翼', ox: 0.8, oy: 0, oz: 0, rad: 0.65, pow: 1.2, sx: 2.5, sy: -0.9, sz: 0, web: 0.5, twist: 0 },
+            'AC': { n: '巨大树叶', ox: 0.8, oy: 0, oz: 0.2, rad: 0.7, pow: 1.2, sx: 2.2, sy: -0.8, sz: 1.5, web: 0, twist: 0 }, 
+            'AG': { n: '战斗机引擎', ox: 0.8, oy: 0, oz: 0, rad: 0.4, pow: 1.5, sx: 2.0, sy: 0, sz: 0.8, web: 0, twist: 0 },
+            'TA': { n: '天使羽翼', ox: 0.8, oy: 0.2, oz: -0.2, rad: 0.6, pow: 1.4, sx: 2.0, sy: 0.5, sz: -0.2, web: 1.5, twist: 0 }, 
+            'TT': { n: '海龟脚蹼', ox: 0.8, oy: -0.2, oz: 0.3, rad: 0.6, pow: 1.2, sx: 2.0, sy: -0.5, sz: 1.0, web: 0, twist: -0.5 },
+            'TC': { n: '飞鱼滑翔伞', ox: 0.8, oy: 0, oz: 0, rad: 0.8, pow: 1.0, sx: 3.0, sy: -0.5, sz: 0, web: 0.2, twist: 0 },
+            'TG': { n: '波浪裙边', ox: 0.8, oy: -0.2, oz: 0, rad: 0.7, pow: 1.2, sx: 1.5, sy: 0, sz: 0, web: -2.0, twist: 0 }, 
+            'CA': { n: '锋利骨刺', ox: 0.8, oy: 0, oz: 0, rad: 0.3, pow: 2.5, sx: 2.5, sy: 0, sz: 0, web: 0, twist: 0 },
+            'CT': { n: '侧边水泡', ox: 0.8, oy: 0, oz: 0, rad: 0.4, pow: 0.8, sx: 1.0, sy: 1.0, sz: 1.0, web: 0, twist: 0 }, 
+            'CC': { n: '蝴蝶翅膀', ox: 0.8, oy: 0.3, oz: 0, rad: 0.7, pow: 1.2, sx: 2.0, sy: 1.5, sz: 0, web: 0.3, twist: 0 },
+            'CG': { n: '螺旋侧角', ox: 0.8, oy: 0, oz: 0, rad: 0.4, pow: 1.5, sx: 2.0, sy: 0, sz: 0, web: 0, twist: 5.0 },
+            'GA': { n: '深海排鳃', ox: 0.8, oy: 0, oz: 0, rad: 0.6, pow: 1.2, sx: 1.2, sy: 0, sz: 0, web: 3.0, twist: 0 },
+            'GT': { n: '云朵浮囊', ox: 0.8, oy: 0, oz: 0, rad: 0.5, pow: 1.2, sx: 1.5, sy: 1.0, sz: 1.5, web: 0.8, twist: 0 },
+            'GC': { n: '机械折翼', ox: 0.8, oy: 0, oz: 0, rad: 0.6, pow: 1.5, sx: 2.0, sy: -0.5, sz: -0.5, web: 0, twist: 0 },
+            'GG': { n: '超宽扁带', ox: 0.8, oy: -0.3, oz: 0, rad: 0.9, pow: 1.0, sx: 3.5, sy: 0, sz: 0.5, web: 0, twist: 0 }
+        };
+
+        const BACK_TENSORS = {
+            'AA': { n: '平滑无刺', type: 'smooth' }, 'AT': { n: '大蒜种球', type: 'garlic' },
+            'AC': { n: '珊瑚分支', type: 'coral' },  'AG': { n: '尖锐骨板', type: 'plates' },
+            'TA': { n: '胖胖毒刺', type: 'fat_spikes' }, 'TT': { n: '火山陨坑', type: 'volcano' }, 
+            'TC': { n: '蘑菇伞盖', type: 'mushroom' }, 'TG': { n: '连绵背鳍', type: 'dorsal_fin' },
+            'CA': { n: '密集水泡', type: 'bubbles' }, 'CT': { n: '晶石矿脉', type: 'crystals' },
+            'CC': { n: '剑龙骨板', type: 'stegosaurus' }, 'CG': { n: '毛绒毛球', type: 'fluff' },
+            'GA': { n: '龟壳甲壳', type: 'shell' }, 'GT': { n: '单根巨刺', type: 'single_horn' },
+            'GC': { n: '双排背棘', type: 'dual_spikes' }, 'GG': { n: '波浪肉冠', type: 'ridge' }
+        };
+
+        const BODY_SHAPES = {
+            'AA': {n:'水滴 (Teardrop)',sx:1.2,sy:1.0,sz:1.2}, 'AT': {n:'飞盘 (Pancake)',sx:2.0,sy:0.5,sz:1.2},
+            'AC': {n:'胖豆 (Bean)',sx:1.4,sy:1.0,sz:1.2},     'AG': {n:'软条 (Slug)',sx:1.0,sy:0.8,sz:2.0},
+            'TA': {n:'长方 (Brick)',sx:1.3,sy:0.9,sz:1.6},    'TT': {n:'圆球 (Sphere)',sx:1.2,sy:1.2,sz:1.2},
+            'TC': {n:'海星 (Starfish)',sx:1.8,sy:0.6,sz:1.8}, 'TG': {n:'潜艇 (Sub)',sx:1.2,sy:0.8,sz:2.2},
+            'CA': {n:'厚吐司 (Toast)',sx:1.5,sy:1.1,sz:1.2},  'CT': {n:'梭子 (Spindle)',sx:0.8,sy:0.8,sz:2.2},
+            'CC': {n:'大头 (BigHead)',sx:1.5,sy:1.2,sz:1.0},  'CG': {n:'飞碟 (UFO)',sx:2.2,sy:0.4,sz:2.2},
+            'GA': {n:'水饺 (Dumpling)',sx:1.6,sy:0.8,sz:1.2}, 'GT': {n:'葫芦 (Gourd)',sx:1.2,sy:1.1,sz:1.6},
+            'GC': {n:'元宝 (Ingot)',sx:1.8,sy:1.0,sz:1.0},    'GG': {n:'巨兽 (Behemoth)',sx:1.8,sy:1.5,sz:1.8}
+        };
+
+        const PALETTES = {
+            'AA': {bg:'#f0fdf4', border:'#4ade80', name:'🍃 嫩芽草', b:['#4ade80','#22c55e'], a:['#fef08a','#d97706']},
+            'AT': {bg:'#ecfdf5', border:'#34d399', name:'🧪 猛毒沼', b:['#34d399','#10b981'], a:['#818cf8','#4f46e5']},
+            'AC': {bg:'#fff7ed', border:'#fb923c', name:'🔥 熔岩火', b:['#ef4444','#f97316'], a:['#fef08a','#991b1b']},
+            'AG': {bg:'#fefce8', border:'#facc15', name:'⚡ 雷电星', b:['#facc15','#eab308'], a:['#1e40af','#9333ea']},
+            'TA': {bg:'#f0f9ff', border:'#38bdf8', name:'💧 深海蓝', b:['#0ea5e9','#3b82f6'], a:['#e0f2fe','#fbcfe8']},
+            'TT': {bg:'#eff6ff', border:'#60a5fa', name:'❄️ 极地冰', b:['#93c5fd','#60a5fa'], a:['#ffffff','#1e3a8a']},
+            'TC': {bg:'#faf5ff', border:'#c084fc', name:'🦇 幽暗影', b:['#a855f7','#7e22ce'], a:['#fdf2f8','#1e293b']},
+            'TG': {bg:'#fdf2f8', border:'#f472b6', name:'🌸 妖精粉', b:['#ec4899','#db2777'], a:['#fde047','#8b5cf6']},
+            'CA': {bg:'#f8fafc', border:'#94a3b8', name:'⚙️ 机械钢', b:['#94a3b8','#64748b'], a:['#f59e0b','#ef4444']},
+            'CT': {bg:'#f5f5f4', border:'#a8a29e', name:'🪨 荒野岩', b:['#a8a29e','#78716c'], a:['#84cc16','#14532d']},
+            'CC': {bg:'#fff1f2', border:'#fb7185', name:'🍬 甜蜜糖', b:['#fb7185','#f43f5e'], a:['#2dd4bf','#0ea5e9']},
+            'CG': {bg:'#fdf4ff', border:'#e879f9', name:'🔮 奥术紫', b:['#d946ef','#c026d3'], a:['#34d399','#facc15']},
+            'GA': {bg:'#fffbeb', border:'#fde047', name:'🌟 圣光耀', b:['#fde047','#eab308'], a:['#ffffff','#fbbf24']},
+            'GT': {bg:'#f0fdfa', border:'#2dd4bf', name:'🌊 浅湾青', b:['#2dd4bf','#14b8a6'], a:['#fef08a','#0f766e']},
+            'GC': {bg:'#fff7ed', border:'#fdba74', name:'🏜️ 尘沙黄', b:['#fdba74','#f97316'], a:['#1e293b','#dc2626']},
+            'GG': {bg:'#0f172a', border:'#334155', name:'🌌 虚空黑', b:['#334155','#1e293b'], a:['#22d3ee','#a855f7']} 
+        };
+
+        const PATTERNS = ['smooth','polka_dots','stripes','voronoi','zebra','gradient','smooth','polka_dots','stripes','voronoi','zebra','gradient','smooth','polka_dots','stripes','voronoi'];
+
+        let isWireframeMode = false;
+
+        function smoothStep(e0, e1, x) {
+            let t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
+            return t * t * (3 - 2 * t);
+        }
+
+        function hashString(str) {
+            let h = 2166136261;
+            for (let i = 0; i < str.length; i++) {
+                h ^= str.charCodeAt(i);
+                h = Math.imul(h, 16777619);
+            }
+            return h >>> 0;
+        }
+
+        function seededRandom(seed) {
+            let s = seed >>> 0;
+            return () => {
+                s += 0x6D2B79F5;
+                let t = s;
+                t = Math.imul(t ^ (t >>> 15), t | 1);
+                t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            };
+        }
+
+        function dnaSignature() {
+            return currentDNA.map(g => g.join('')).join('-');
+        }
+
+        function addVec(out, dx, dy, dz, disp) {
+            out.dx += dx;
+            out.dy += dy;
+            out.dz += dz;
+            out.disp = Math.max(out.disp, disp);
+        }
+
+        function ellipsoidField(x, y, z, cx, cy, cz, rx, ry, rz) {
+            const d = Math.sqrt(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 + ((z - cz) / rz) ** 2);
+            if (d >= 1) return 0;
+            return smoothStep(1, 0, d);
+        }
+
+        function needsHeadClearance(code) {
+            return code === 'AA' || code === 'AC' || code === 'CC' || code === 'GC' || code === 'TG';
+        }
+
+        function frontClearance(z, code) {
+            if (!needsHeadClearance(code)) return smoothStep(0.48, 0.12, z);
+            // Iconic head traits need the whole front silhouette. Keep side/dorsal traits mostly behind them.
+            return smoothStep(-0.08, -0.72, z);
+        }
+
+        function applyHeadBlueprint(x, y, z, code, params) {
+            const out = { dx: 0, dy: 0, dz: 0, disp: 0 };
+
+            if (code === 'GC') {
+                const center = smoothStep(0.42, 0.06, Math.abs(x));
+                const front = smoothStep(0.45, 0.98, z);
+                const low = smoothStep(0.72, -0.38, y);
+                const tube = center * front * low;
+                const tipPad = tube * smoothStep(-0.05, -0.68, y);
+                addVec(out, -x * tube * 0.24 + x * tipPad * 0.34, -tube * 1.45 - tipPad * 0.22, tube * 1.55 + tipPad * 0.16, tube);
+                return out;
+            }
+
+            if (code === 'TG') {
+                const p = ellipsoidField(x, y, z, 0, 0.72, 0.58, 0.36, 0.34, 0.34);
+                const flame = Math.sin(y * 14 + z * 8) * 0.2 * p;
+                addVec(out, x * p * 0.15 + flame, p * 2.1, -p * 0.25, p);
+            }
+
+            if (code === 'CT') {
+                const p = ellipsoidField(x, y, z, 0, 0.74, 0.35, 0.72, 0.36, 0.55);
+                const folds = Math.sin(x * 18) * Math.cos(z * 14) * 0.18 * p;
+                addVec(out, x * p * 0.5 + folds, p * 0.9, z * p * 0.2, p);
+            }
+
+            if (code === 'TT') {
+                const center = ellipsoidField(x, y, z, 0, 0.78, 0.36, 0.18, 0.34, 0.25);
+                const crown = Math.pow(center, 1.4);
+                addVec(out, x * crown * 0.35, crown * 1.7, z * crown * 0.15, crown);
+            }
+
+            for (let sign of [1, -1]) {
+                let p = 0;
+                let lx = 0, ly = 0, lz = 0;
+
+                if (code === 'AA') {
+                    const cx = sign * 0.46, cy = 0.46, cz = 0.5;
+                    p = ellipsoidField(x, y, z, cx, cy, cz, 0.52, 0.36, 0.34);
+                    lx = x - cx; ly = y - cy; lz = z - cz;
+                    const disk = Math.pow(p, 0.72);
+                    addVec(out, sign * disk * 1.35 + lx * p * 0.45, ly * p * 0.45 + disk * 0.04, -lz * p * 1.1 - p * 0.08, p);
+                } else if (code === 'CC') {
+                    const cx = sign * 0.36, cy = 0.57, cz = 0.58;
+                    p = ellipsoidField(x, y, z, cx, cy, cz, 0.36, 0.3, 0.28);
+                    lx = x - cx; lz = z - cz;
+                    const base = Math.pow(p, 0.6);
+                    const point = Math.pow(p, 1.6);
+                    addVec(out, sign * (0.72 * base + 0.12 * point - Math.abs(lx) * p * 0.06), base * 0.46 + point * 0.34, -lz * p * 1.0 - p * 0.1, p);
+                } else if (code === 'AC') {
+                    const cx = sign * 0.27, cy = 0.62, cz = 0.52;
+                    p = ellipsoidField(x, y, z, cx, cy, cz, 0.34, 0.46, 0.26);
+                    lx = x - cx; lz = z - cz;
+                    const lobe = Math.pow(p, 0.58);
+                    const roundTip = Math.pow(p, 2.6);
+                    const lean = smoothStep(0.35, 1.0, y) * p;
+                    addVec(out, sign * (lobe * 0.32 + lean * 0.18) + lx * p * 0.28, lobe * 1.18 + roundTip * 0.04, -lobe * 0.24 - lz * p * 0.36, p);
+                } else if (code === 'AG' || code === 'CG') {
+                    p = ellipsoidField(x, y, z, sign * 0.28, 0.58, 0.65, 0.24, 0.28, 0.24);
+                    const sharp = Math.pow(p, code === 'CG' ? 2.6 : 1.8);
+                    addVec(out, sign * sharp * 0.35, sharp * 2.0, sharp * 0.28, p);
+                } else if (code === 'TC') {
+                    p = ellipsoidField(x, y, z, sign * 0.2, 0.62, 0.58, 0.17, 0.32, 0.17);
+                    const stalk = Math.pow(p, 1.25);
+                    const bulb = Math.pow(p, 6.0);
+                    addVec(out, sign * (stalk * 0.12 + bulb * 0.75), stalk * 2.25 + bulb * 0.55, stalk * 0.08 + bulb * 0.25, p);
+                } else if (code === 'CA') {
+                    p = ellipsoidField(x, y, z, sign * 0.44, 0.18, 0.78, 0.22, 0.22, 0.24);
+                    addVec(out, sign * p * 2.2, -p * 1.25, p * 0.25, p);
+                } else if (code === 'GA') {
+                    p = ellipsoidField(x, y, z, sign * 0.42, 0.5, 0.48, 0.34, 0.36, 0.26);
+                    lz = z - 0.48;
+                    addVec(out, sign * p * 0.8, -p * 1.35, -lz * p * 0.75 - p * 0.1, p);
+                } else if (code === 'GG') {
+                    p = ellipsoidField(x, y, z, sign * 0.48, 0.5, 0.67, 0.32, 0.25, 0.24);
+                    addVec(out, sign * p * 2.15, p * 0.15, -p * 0.1, p);
+                } else if (code === 'GT') {
+                    p = ellipsoidField(x, y, z, sign * 0.3, 0.62, 0.58, 0.33, 0.34, 0.25);
+                    const feather = Math.sin(Math.atan2(y - 0.62, x - sign * 0.3) * 8) * p * 0.2;
+                    addVec(out, sign * p * 1.35 + sign * feather, p * 1.2, -p * 0.35, p);
+                } else if (code === 'AT') {
+                    p = ellipsoidField(x, y, z, sign * 0.44, 0.38, 0.45, 0.35, 0.2, 0.25);
+                    const frill = Math.sin((y + z) * 18) * p * 0.22;
+                    addVec(out, sign * p * 1.65, p * 0.15 + frill, -p * 0.35, p);
+                } else {
+                    const tf = applyTensorField(x, y, z, params, sign);
+                    addVec(out, tf.dx, tf.dy, tf.dz, tf.disp);
+                }
+            }
+
+            return out;
+        }
+
+        function applySideBlueprint(x, y, z, code, params, headCode) {
+            const out = { dx: 0, dy: 0, dz: 0, disp: 0 };
+            if (code === 'AA') return out;
+
+            for (let sign of [1, -1]) {
+                const cx = sign * params.ox;
+                let p = ellipsoidField(x, y, z, cx, params.oy, params.oz, Math.max(0.25, params.rad), 0.55, 0.58);
+                if (code === 'GG' || code === 'TC' || code === 'AT' || code === 'CC') p *= frontClearance(z, headCode);
+                if (p <= 0) continue;
+                const ease = Math.pow(p, params.pow);
+                const localZ = z - params.oz;
+                const localY = y - params.oy;
+
+                if (code === 'AT') {
+                    const rib = Math.abs(Math.sin((localZ + 1) * 11)) * Math.pow(ease, 2.0);
+                    addVec(out, sign * (ease * 2.35 - rib * 0.55), -Math.abs(localY) * ease * 0.85 - rib * 0.25, localZ * ease * 0.25, p);
+                } else if (code === 'CC') {
+                    addVec(out, sign * ease * 2.05, ease * 1.05 + localY * ease * 0.75, -localZ * ease * 0.65, p);
+                } else if (code === 'AC') {
+                    const leaf = Math.sin(ease * Math.PI);
+                    addVec(out, sign * ease * 2.25, -ease * 0.25, localZ * leaf * 1.7 - ease * 0.2, p);
+                } else if (code === 'TA') {
+                    const feathers = Math.abs(Math.sin(localZ * 12)) * Math.pow(ease, 1.6);
+                    addVec(out, sign * ease * 2.0, ease * 0.75 - feathers * 0.2, -ease * 0.15 + feathers * 0.2, p);
+                } else if (code === 'TC' || code === 'GG') {
+                    const widthScale = code === 'GG' ? 0.78 : 0.92;
+                    addVec(out, sign * ease * params.sx * widthScale, -ease * 0.6, localZ * ease * 0.2 - ease * 0.08, p);
+                } else if (code === 'CG') {
+                    const twistAngle = ease * params.twist;
+                    const localX = x - cx;
+                    const rotX = Math.cos(twistAngle) * localX - Math.sin(twistAngle) * localZ;
+                    const rotZ = Math.sin(twistAngle) * localX + Math.cos(twistAngle) * localZ;
+                    addVec(out, sign * (ease * 1.8 + rotX - localX), ease * 0.1, rotZ - localZ, p);
+                } else if (code === 'GA') {
+                    const gills = Math.abs(Math.sin(localZ * 16)) * ease;
+                    addVec(out, sign * ease * 1.35, gills * 0.55, -gills * 0.35, p);
+                } else {
+                    addVec(out, sign * ease * params.sx, ease * params.sy, localZ * Math.sin(ease * Math.PI) * params.sz, p);
+                    if (params.web !== 0) {
+                        const web = Math.abs(Math.sin(localZ * 8.0)) * params.web;
+                        out.dx -= sign * web * Math.pow(ease, 2.0) * 1.1;
+                    }
+                }
+            }
+
+            return out;
+        }
+
+        function applyBackBlueprint(x, y, z, baseY, code, params, nx, ny, nz, zNorm, headCode) {
+            const out = { dx: 0, dy: 0, dz: 0, disp: 0 };
+            if (baseY <= 0 || code === 'AA') return out;
+
+            const headClear = frontClearance(z, headCode);
+            const dC = Math.hypot(x, y - 0.5, z + 0.3);
+            const pC = smoothStep(0.8, 0.0, dC) * (needsHeadClearance(headCode) ? headClear : 1);
+            const center = smoothStep(0.38, 0.0, Math.abs(x));
+            const spineBand = smoothStep(-0.85, -0.05, z) * smoothStep(0.55, -0.12, z) * (needsHeadClearance(headCode) ? headClear : 1);
+
+            if (params.type === 'garlic' && pC > 0) {
+                const grooves = 1.0 + 0.15 * Math.sin(Math.abs(Math.atan2(x, z + 0.3)) * 6);
+                const ease = Math.pow(pC, 1.5) * grooves;
+                addVec(out, nx * ease * 1.5, ny * ease * 1.5, nz * ease * 1.5, pC);
+            } else if (params.type === 'volcano' && pC > 0) {
+                const ease = Math.pow(pC, 1.2);
+                const crater = Math.sin(pC * Math.PI) * 0.8;
+                addVec(out, nx * ease * 0.25, ease * 1.45 - crater * pC * 2.0, nz * ease * 0.25, pC);
+            } else if (params.type === 'coral') {
+                const dS = Math.abs(x);
+                if (dS < 0.6 && z > -0.8 && z < 0.5) {
+                    const p = smoothStep(0.6, 0.0, dS) * smoothStep(-0.8, -0.1, z) * smoothStep(0.5, -0.1, z);
+                    const branches = Math.max(0, Math.sin(Math.abs(x) * 15) * Math.cos(z * 15) + Math.sin(y * 20) * 0.5);
+                    const ease = p * (1.0 + branches * 1.2);
+                    addVec(out, nx * ease * 0.4, ease * 1.2, nz * ease * 0.4, p);
+                }
+            } else if (params.type === 'dorsal_fin') {
+                const p = smoothStep(0.22, 0.0, Math.abs(x)) * spineBand;
+                const finWave = Math.pow(Math.abs(Math.sin(z * 6.0)), 1.25);
+                addVec(out, 0, p * finWave * 1.8, 0, p * finWave);
+            } else if (params.type === 'plates' || params.type === 'stegosaurus') {
+                const plateRhythm = Math.pow(Math.max(0, Math.sin((z + 0.9) * Math.PI * 4.0)), 1.1);
+                const p = center * spineBand * plateRhythm;
+                addVec(out, nx * p * 0.25, p * (params.type === 'stegosaurus' ? 1.8 : 1.35), nz * p * 0.2, p);
+            } else if (params.type === 'mushroom') {
+                const p = pC * smoothStep(0.05, 0.75, y);
+                addVec(out, x * p * 0.9, p * 0.85, (z + 0.25) * p * 0.75, p);
+            } else if (params.type === 'crystals') {
+                let b = Math.max(0, Math.cos(x * Math.PI * 4) * Math.sin(zNorm * Math.PI * 3.5) - 0.2);
+                b = Math.pow(b, 3.0);
+                addVec(out, nx * b * 0.9, b * 1.8, nz * b * 0.9, b);
+            } else if (params.type === 'fluff') {
+                let b = Math.max(0, Math.sin(x * 16) * Math.sin(y * 12) * Math.cos(z * 12));
+                b = Math.pow(b, 0.7) * pC;
+                addVec(out, nx * b * 0.45, ny * b * 0.45 + b * 0.25, nz * b * 0.45, b);
+            } else if (params.type === 'shell') {
+                const p = pC * smoothStep(-0.65, 0.25, z);
+                const grooves = 1.0 + Math.abs(Math.sin(x * 10)) * 0.15;
+                addVec(out, nx * p * 0.8 * grooves, p * 0.75, nz * p * 0.5 * grooves, p);
+            } else if (params.type === 'single_horn') {
+                const p = ellipsoidField(x, y, z, 0, 0.7, -0.05, 0.22, 0.32, 0.35);
+                const sharp = Math.pow(p, 2.3);
+                addVec(out, 0, sharp * 2.0, -sharp * 0.45, p);
+            } else if (params.type === 'dual_spikes') {
+                const row = Math.max(
+                    ellipsoidField(x, y, z, 0.28, 0.55, -0.1, 0.16, 0.28, 0.62),
+                    ellipsoidField(x, y, z, -0.28, 0.55, -0.1, 0.16, 0.28, 0.62)
+                );
+                const p = row * spineBand;
+                addVec(out, nx * p * 0.3, p * 1.4, nz * p * 0.25, p);
+            } else if (params.type === 'ridge') {
+                const p = center * spineBand * (0.45 + 0.55 * Math.abs(Math.sin(z * 7)));
+                addVec(out, 0, p * 1.2, Math.sin(z * 8) * p * 0.18, p);
+            } else if (params.type === 'bubbles') {
+                let b = Math.max(0, Math.cos(x * Math.PI * 4) * Math.sin(zNorm * Math.PI * 4) - 0.1);
+                b = Math.pow(b, 0.8);
+                addVec(out, nx * b * 0.5, ny * b * 0.5, nz * b * 0.5, b);
+            } else {
+                let b = Math.max(0, Math.cos(x * Math.PI * 2.5) * Math.sin(zNorm * Math.PI * 3.0) - 0.2);
+                b = Math.pow(b, 1.5);
+                addVec(out, nx * b, ny * b, nz * b, b);
+            }
+
+            return out;
+        }
+
+        function addFeatureMarkers(group, cHd, cSd, accentColor) {
+            const innerMat = new THREE.MeshStandardMaterial({ color: accentColor, roughness: 0.8, metalness: 0, side: THREE.DoubleSide, wireframe: isWireframeMode });
+            const darkMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.5, metalness: 0, wireframe: isWireframeMode });
+
+            if (cHd === 'GC') {
+                const geo = new THREE.SphereGeometry(0.055, 8, 8);
+                for (let sign of [1, -1]) {
+                    const n = new THREE.Mesh(geo, darkMat);
+                    n.position.set(sign * 0.1, -0.86, 2.16);
+                    n.scale.set(1.1, 0.76, 0.5);
+                    group.add(n);
+                }
+            }
+
+            if (cSd === 'CC') {
+                const spotGeo = new THREE.CircleGeometry(0.08, 14);
+                for (let sign of [1, -1]) {
+                    const spot = new THREE.Mesh(spotGeo, innerMat);
+                    spot.position.set(sign * 2.15, 0.72, 0.08);
+                    spot.rotation.y = sign * -0.9;
+                    group.add(spot);
+                }
+            }
+        }
+
+        // --- 万向张量核心方程 ---
+        function applyTensorField(x, y, z, params, sign) {
+            let cOx = sign * params.ox;
+            let d = Math.hypot(x - cOx, y - params.oy, z - params.oz);
+            if (d > params.rad) return { dx: 0, dy: 0, dz: 0, disp: 0 };
+
+            let p = Math.max(0, 1.0 - d / params.rad);
+            p = p * p * (3 - 2 * p); // C1 SmoothStep
+
+            let ease = Math.pow(p, params.pow);
+            let dx = 0, dy = 0, dz = 0;
+
+            let localX = x - cOx;
+            let localZ = z - params.oz;
+            let twistAngle = ease * params.tw;
+            
+            let rotX = Math.cos(twistAngle)*localX - Math.sin(twistAngle)*localZ;
+            let rotZ = Math.sin(twistAngle)*localX + Math.cos(twistAngle)*localZ;
+
+            if (params.wv !== 0) {
+                let waveDisp = Math.sin(Math.atan2(rotX, rotZ) * params.wv) * 0.2 * ease;
+                dx += sign * rotX * waveDisp * 3.0; 
+                dz += rotZ * waveDisp * 3.0;
+            } else {
+                dx += sign * (rotX - localX);
+                dz += (rotZ - localZ);
+            }
+
+            dx += sign * ease * params.sx;
+            dy += ease * params.sy;
+            dz += ease * params.sz;
+
+            if (params.sz < 0) {
+                dz += localZ * ease * params.sz; 
+            }
+
+            if (params.dr !== 0) {
+                dz -= Math.pow(ease, 1.8) * params.dr;
+            }
+
+            if (params.cav !== 0) {
+                let frontMask = Math.max(0, 1.0 - Math.abs(localZ) / (params.rad * 0.6));
+                frontMask = frontMask * frontMask * (3 - 2 * frontMask);
+                dz -= Math.sin(ease * Math.PI) * params.cav * frontMask;
+            }
+
+            if (params.blb !== 0) {
+                let tip = Math.pow(p, 6.0); 
+                dx += sign * tip * params.blb;
+                dy += tip * params.blb;
+                dz += tip * params.blb;
+            }
+
+            return { dx, dy, dz, disp: p };
+        }
+
+        // --- 渲染器初始化 ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(10, 8, 12);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); 
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+        
+        const mainLight = new THREE.DirectionalLight(0xffffff, 1.3); mainLight.position.set(5, 10, 5); mainLight.castShadow = true; 
+        mainLight.shadow.mapSize.width = 1024; mainLight.shadow.mapSize.height = 1024; 
+        scene.add(mainLight);
+        
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        fillLight.position.set(-5, 4, -5);
+        scene.add(fillLight);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+
+        let currentGroup = null, floatWrapper = null, exportableModel = null; 
+
+        function buildCreature() {
+            if (currentGroup) { 
+                scene.remove(currentGroup); 
+                currentGroup.traverse((c) => { if (c.isMesh) { c.geometry.dispose(); c.material.dispose(); } });
+            }
+            currentGroup = new THREE.Group(); floatWrapper = new THREE.Group(); currentGroup.add(floatWrapper);
+            
+            const cEl = currentDNA[0].join(''); const pal = PALETTES[cEl];
+            const cSh = currentDNA[1].join(''); const shp = BODY_SHAPES[cSh];
+            const cHd = currentDNA[2].join(''); const headParams = HEAD_TENSORS[cHd];
+            const cSd = currentDNA[3].join(''); const sideParams = SIDE_TENSORS[cSd];
+            const cBk = currentDNA[4].join(''); const backParams = BACK_TENSORS[cBk];
+            const patId = PATTERNS[BASES.indexOf(currentDNA[5][0])*4 + BASES.indexOf(currentDNA[5][1])];
+            const rand = seededRandom(hashString(`tensor-lab-v27:${dnaSignature()}`));
+
+            const baseColor = new THREE.Color(pal.b[Math.floor(rand() * pal.b.length)]);
+            const accentColor = new THREE.Color(pal.a[Math.floor(rand() * pal.a.length)]);
+
+            document.body.style.background = `radial-gradient(circle at center, ${cEl==='GG'?'#1e293b':'#ffffff'}, ${pal.bg})`;
+            document.getElementById('ui-layer').style.borderColor = pal.border;
+            document.getElementById('stats-layer').style.borderColor = pal.border;
+            document.getElementById('type-indicator').innerHTML = `<span style="color:${pal.border}">${pal.name}</span>`;
+
+            const vinylMat = new THREE.MeshStandardMaterial({
+                vertexColors: true, roughness: 0.75, metalness: 0.0, side: THREE.FrontSide, wireframe: isWireframeMode
+            });
+
+            // 3000 面预算保护：主体最多约 1.9k 面，剩余留给眼睛/鼻孔/内耳小 mesh。
+            let wSegments = 40, hSegments = 24;
+            if (cHd === 'AA' || cHd === 'CC' || cHd === 'GC' || cSd === 'CC' || cSd === 'AT' || cBk !== 'AA') {
+                wSegments = 42; hSegments = 24;
+            }
+            
+            const geo = new THREE.SphereGeometry(1.0, wSegments, hSegments); 
+            const pos = geo.attributes.position;
+            const colors = new Float32Array(pos.count * 3);
+            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            const eyeOrigin = new THREE.Vector3(0.35, 0.15, 0.85);
+            const blushOrigin = new THREE.Vector3(0.45, -0.05, 0.75);
+            let leftEyeIdx = -1, rightEyeIdx = -1, leftEyeDist = 999, rightEyeDist = 999;
+
+            for(let i=0; i<pos.count; i++) {
+                let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+                
+                let dL = Math.hypot(x - eyeOrigin.x, y - eyeOrigin.y, z - eyeOrigin.z);
+                if (dL < leftEyeDist) { leftEyeDist = dL; leftEyeIdx = i; }
+                let dR = Math.hypot(x + eyeOrigin.x, y - eyeOrigin.y, z - eyeOrigin.z);
+                if (dR < rightEyeDist) { rightEyeDist = dR; rightEyeIdx = i; }
+
+                let nx = x, ny = y, nz = z; let zNorm = z; 
+                
+                let taper = 0.5 + (zNorm + 1.0) / 4.0; 
+                let baseX = x * taper * shp.sx, baseY = y * taper * shp.sy, baseZ = z * shp.sz;
+                
+                let disp = 0; 
+                
+                // 1. 头部语义蓝图：用不同轮廓程序替代统一拉伸参数。
+                let headField = applyHeadBlueprint(x, y, z, cHd, headParams);
+                baseX += headField.dx; baseY += headField.dy; baseZ += headField.dz; disp = Math.max(disp, headField.disp);
+
+                // 2. 侧翼语义蓝图：蝙蝠膜、蝴蝶瓣、叶片、螺旋侧角分开处理。
+                let sideField = applySideBlueprint(x, y, z, cSd, sideParams, cHd);
+                baseX += sideField.dx; baseY += sideField.dy; baseZ += sideField.dz; disp = Math.max(disp, sideField.disp);
+
+                // 3. 背部语义蓝图：补齐原先共用 generic spike 的背部类型差异。
+                let backField = applyBackBlueprint(x, y, z, baseY, cBk, backParams, nx, ny, nz, zNorm, cHd);
+                baseX += backField.dx; baseY += backField.dy; baseZ += backField.dz; disp = Math.max(disp, backField.disp);
+
+                // 底盘压平：所有语义形态共享同一地板约束，避免象鼻/侧翼穿透平面。
+                let bottomLimit = -0.3;
+                if (baseY < bottomLimit) {
+                    let squash = bottomLimit - baseY;
+                    baseY = bottomLimit;
+                    baseX += squash * 0.8 * baseX; 
+                    baseZ += squash * 0.4 * baseZ;
+                }
+
+                pos.setXYZ(i, baseX, baseY, baseZ);
+
+                // --- 染色逻辑 ---
+                let cMix = smoothStep(0.1, 0.7, disp);
+                let r = THREE.MathUtils.lerp(baseColor.r, accentColor.r, cMix);
+                let g = THREE.MathUtils.lerp(baseColor.g, accentColor.g, cMix);
+                let b = THREE.MathUtils.lerp(baseColor.b, accentColor.b, cMix);
+                
+                if (patId === 'polka_dots') {
+                    if (Math.sin(x*5) * Math.cos(z*5) > 0.6) { r=accentColor.r; g=accentColor.g; b=accentColor.b; }
+                } else if (patId === 'stripes') {
+                    if (Math.sin(x*8 + z*8) > 0.5) { r=accentColor.r; g=accentColor.g; b=accentColor.b; }
+                } else if (patId === 'voronoi') {
+                    if (Math.sin(x*10) * Math.sin(y*10) * Math.sin(z*10) > 0.2) { r=accentColor.r; g=accentColor.g; b=accentColor.b; }
+                } else if (patId === 'zebra') {
+                    if (Math.sin(x*15 + Math.sin(z*5)*5) > 0.5) { r=accentColor.r; g=accentColor.g; b=accentColor.b; }
+                } else if (patId === 'gradient') {
+                    let grad = smoothStep(-1.0, 1.0, z);
+                    r = THREE.MathUtils.lerp(r, accentColor.r, grad); g = THREE.MathUtils.lerp(g, accentColor.g, grad); b = THREE.MathUtils.lerp(b, accentColor.b, grad);
+                }
+                
+                let dB = Math.min(Math.hypot(x-blushOrigin.x, y-blushOrigin.y, z-blushOrigin.z), Math.hypot(x+blushOrigin.x, y-blushOrigin.y, z-blushOrigin.z));
+                let bMix = Math.max(0, 1.0 - dB/0.25);
+                if (bMix > 0) { r += (0.95-r)*bMix; g += (0.3-g)*bMix; b += (0.5-b)*bMix; }
+                
+                colors[i*3] = r; colors[i*3+1] = g; colors[i*3+2] = b;
+            }
+
+            geo.computeVertexNormals();
+            const toyMesh = new THREE.Mesh(geo, vinylMat); toyMesh.castShadow = true; floatWrapper.add(toyMesh);
+
+            const eyeMat = new THREE.MeshStandardMaterial({color: 0x050505, roughness: 0.1, metalness: 0.3, wireframe: isWireframeMode});
+            const hlMat = new THREE.MeshBasicMaterial({color: 0xffffff});
+            
+            const eyeGeo = new THREE.SphereGeometry(0.12, 10, 10); eyeGeo.scale(0.8, 1.25, 0.5); 
+            const eyeGroup = new THREE.Group(); 
+            eyeGroup.add(new THREE.Mesh(eyeGeo, eyeMat));
+            const hl1 = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 6), hlMat); hl1.position.set(0.03, 0.06, 0.045); eyeGroup.add(hl1);
+            const hl2 = new THREE.Mesh(new THREE.SphereGeometry(0.015, 6, 6), hlMat); hl2.position.set(-0.03, -0.05, 0.045); eyeGroup.add(hl2);
+
+            [leftEyeIdx, rightEyeIdx].forEach((idx) => {
+                let p = new THREE.Vector3(pos.getX(idx), pos.getY(idx), pos.getZ(idx)), n = new THREE.Vector3(geo.attributes.normal.getX(idx), geo.attributes.normal.getY(idx), geo.attributes.normal.getZ(idx));
+                const e = eyeGroup.clone(); e.position.copy(p); e.lookAt(p.clone().add(n)); e.position.addScaledVector(n, -0.01); floatWrapper.add(e);
+            });
+
+            addFeatureMarkers(floatWrapper, cHd, cSd, accentColor);
+
+            const shadowMesh = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1.0 }));
+            shadowMesh.rotation.x = -Math.PI/2; shadowMesh.position.y = -0.32; shadowMesh.receiveShadow=true; currentGroup.add(shadowMesh);
+            scene.add(currentGroup);
+            
+            exportableModel = floatWrapper;
+
+            let faceCount = 0;
+            floatWrapper.traverse((c) => { if (c.isMesh && c.geometry) faceCount += (c.geometry.index ? c.geometry.index.count : c.geometry.attributes.position.count) / 3; });
+            document.getElementById('poly-count').innerText = faceCount.toLocaleString() + " 面 (智能自适应)";
+        }
+
+        document.getElementById('btn-wireframe').addEventListener('click', function() {
+            isWireframeMode = !isWireframeMode;
+            this.classList.toggle('active', isWireframeMode);
+            this.innerText = isWireframeMode ? "💎 返回材质模式" : "🕸️ 拓扑剖析";
+            buildCreature(); 
+        });
+
+        document.getElementById('btn-download').addEventListener('click', () => {
+            if (!exportableModel) return;
+            const exportGroup = new THREE.Group();
+            exportableModel.children.forEach(child => {
+                if (child.isMesh || child.isGroup) {
+                    const clonedChild = child.clone(true); 
+                    if(clonedChild.material && clonedChild.material.vertexColors) clonedChild.material.needsUpdate = true;
+                    exportGroup.add(clonedChild);
+                }
+            });
+            exportGroup.position.set(0,0,0); exportGroup.rotation.set(0,0,0); exportGroup.scale.set(1,1,1);
+            
+            new GLTFExporter().parse(exportGroup, (gltf) => {
+                const zip = new JSZip();
+                zip.file("Universal_Tensor_Asset.glb", gltf);
+                zip.generateAsync({type:"blob"}).then(blob => {
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "Universal_Tensor_Asset.zip"; a.click();
+                });
+            }, function ( error ) { console.error('导出失败:', error); }, { binary: true });
+        });
+
+        function renderUI() {
+            const board = document.getElementById('dna-board'); board.innerHTML = '';
+            currentDNA.forEach((gene, idx) => {
+                const block = document.createElement('div'); block.className = 'gene-block';
+                
+                let traitName = "";
+                const code = gene.join('');
+                if(idx===0) traitName = PALETTES[code].name;
+                if(idx===1) traitName = BODY_SHAPES[code].n;
+                if(idx===2) traitName = HEAD_TENSORS[code].n;
+                if(idx===3) traitName = SIDE_TENSORS[code].n;
+                if(idx===4) traitName = BACK_TENSORS[code].n;
+                if(idx===5) traitName = PATTERNS[BASES.indexOf(gene[0])*4+BASES.indexOf(gene[1])];
+
+                block.innerHTML = `
+                    <div class="gene-label">${GENE_NAMES[idx]}</div>
+                    <div class="base-pairs"></div>
+                    <div class="trait-name">${traitName}</div>
+                `;
+                gene.forEach((base, bIdx) => {
+                    const btn = document.createElement('div'); btn.className = `base base-${base}`; btn.innerText = base;
+                    btn.onclick = () => { currentDNA[idx][bIdx] = BASES[(BASES.indexOf(base)+1)%4]; renderUI(); triggerMutation(); };
+                    block.querySelector('.base-pairs').appendChild(btn);
+                });
+                board.appendChild(block);
+            });
+        }
+        function triggerMutation() { document.getElementById('loading').style.opacity = 1; setTimeout(() => { buildCreature(); document.getElementById('loading').style.opacity = 0; }, 50); }
+        document.getElementById('btn-randomize').addEventListener('click', () => { currentDNA = currentDNA.map(() => [BASES[Math.floor(Math.random()*4)], BASES[Math.floor(Math.random()*4)]]); renderUI(); triggerMutation(); });
+
+        renderUI(); triggerMutation();
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            if(floatWrapper) {
+                let t = clock.getElapsedTime();
+                floatWrapper.position.y = 0;
+                floatWrapper.scale.set(1.0 + Math.cos(t * 4.0) * 0.02, 1.0 + Math.cos(t * 4.0) * 0.03, 1.0 + Math.sin(t * 4.0) * 0.04);
+                floatWrapper.rotation.y = Math.sin(t * 2.0) * 0.05;
+            }
+            controls.update(); renderer.render(scene, camera);
+        }
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+        animate();
+    </script>
+</body>
+</html>
