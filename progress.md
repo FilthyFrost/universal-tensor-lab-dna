@@ -10,3 +10,4 @@ Original prompt: 现在你继续去做我刚刚提到的需求：需求：不要
 - Updated app/docs/package to v30.0.
 - QA atlas verification: generated 144 screenshots in `qa-atlas/latest-v30`, browser errors `[]`, face ranges head 2440-2756, side 2440-2532, dorsal 2440-2532, no cases over 3000 faces.
 - Visual note: v30 is much more extreme than v29. Mouse-ear AA was adjusted once after inspection because the first pass read too much like a horizontal spike wing.
+- Follow-up: shortened GC elephant trunk after user screenshots showed it was too long. Reduced forward Z displacement, reduced downward bend to avoid floor-flattened blade shape, and moved nostril marker meshes closer to the shorter trunk tip.

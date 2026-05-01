@@ -407,13 +407,13 @@
 
             if (primitive === 'sweptTubeTrunk') {
                 const center = smoothStep(0.5, 0.04, Math.abs(x));
-                const front = smoothStep(0.32, 1.0, z);
-                const low = smoothStep(0.82, -0.55, y);
-                const tube = Math.pow(center * front * low, 0.78);
-                const tipPad = tube * smoothStep(-0.1, -0.76, y);
+                const front = smoothStep(0.42, 0.98, z);
+                const low = smoothStep(0.68, -0.34, y);
+                const tube = Math.pow(center * front * low, 0.84);
+                const tipPad = tube * smoothStep(0.05, -0.52, y);
                 const nasalRidge = smoothStep(0.16, 0.0, Math.abs(x)) * front * smoothStep(0.55, -0.38, y);
-                addVec(out, -x * tube * 0.42 + x * tipPad * 0.56, -tube * 1.85 - tipPad * 0.26, tube * 2.05 + tipPad * 0.24, tube);
-                addVec(out, 0, nasalRidge * 0.14, nasalRidge * 0.32, nasalRidge);
+                addVec(out, -x * tube * 0.34 + x * tipPad * 0.28, -tube * 0.85 - tipPad * 0.18, tube * 1.05 + tipPad * 0.14, tube);
+                addVec(out, 0, nasalRidge * 0.08, nasalRidge * 0.18, nasalRidge);
                 return out;
             }
 
@@ -705,7 +705,7 @@
                 const geo = new THREE.SphereGeometry(0.055, 8, 8);
                 for (let sign of [1, -1]) {
                     const n = new THREE.Mesh(geo, darkMat);
-                    n.position.set(sign * 0.1, -0.86, 2.16);
+                    n.position.set(sign * 0.1, -0.52, 1.55);
                     n.scale.set(1.1, 0.76, 0.5);
                     group.add(n);
                 }
