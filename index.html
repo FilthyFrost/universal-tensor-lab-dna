@@ -212,14 +212,14 @@
         };
 
         const BACK_TENSORS = {
-            'AA': { n: '平滑无刺', type: 'smooth' }, 'AT': { n: '大蒜种球', type: 'garlic' },
-            'AC': { n: '珊瑚分支', type: 'coral' },  'AG': { n: '尖锐骨板', type: 'plates' },
-            'TA': { n: '胖胖毒刺', type: 'fat_spikes' }, 'TT': { n: '火山陨坑', type: 'volcano' }, 
-            'TC': { n: '蘑菇伞盖', type: 'mushroom' }, 'TG': { n: '连绵背鳍', type: 'dorsal_fin' },
-            'CA': { n: '密集水泡', type: 'bubbles' }, 'CT': { n: '晶石矿脉', type: 'crystals' },
-            'CC': { n: '剑龙骨板', type: 'stegosaurus' }, 'CG': { n: '毛绒毛球', type: 'fluff' },
-            'GA': { n: '龟壳甲壳', type: 'shell' }, 'GT': { n: '单根巨刺', type: 'single_horn' },
-            'GC': { n: '双排背棘', type: 'dual_spikes' }, 'GG': { n: '波浪肉冠', type: 'ridge' }
+            'AA': { n: '平滑无刺', type: 'smooth' }, 'AT': { n: '海葵球冠', type: 'garlic' },
+            'AC': { n: '鹿角珊瑚', type: 'coral' },  'AG': { n: '锯齿鳍板', type: 'plates' },
+            'TA': { n: '海胆刺阵', type: 'fat_spikes' }, 'TT': { n: '深海喷孔', type: 'volcano' },
+            'TC': { n: '水母伞盖', type: 'mushroom' }, 'TG': { n: '海马波鳍', type: 'dorsal_fin' },
+            'CA': { n: '裸鳃花冠', type: 'bubbles' }, 'CT': { n: '发光晶脊', type: 'crystals' },
+            'CC': { n: '翻车鱼帆板', type: 'stegosaurus' }, 'CG': { n: '裸鳃触手簇', type: 'fluff' },
+            'GA': { n: '甲壳盾背', type: 'shell' }, 'GT': { n: '旗鱼背枪', type: 'single_horn' },
+            'GC': { n: '狮子鱼毒棘', type: 'dual_spikes' }, 'GG': { n: '蝠鲼肉冠', type: 'ridge' }
         };
 
         const BODY_SHAPES = {
@@ -630,78 +630,113 @@
 
             const primitive = DORSAL_PRIMITIVES[code] || params.type;
             const headClear = frontClearance(z, headCode);
-            const dC = Math.hypot(x, y - 0.48, z + 0.26);
-            const pC = smoothStep(0.92, 0.0, dC) * (needsHeadClearance(headCode) ? headClear : 1);
+            const clear = needsHeadClearance(headCode) ? headClear : 1;
+            const dC = Math.hypot(x * 0.92, y - 0.5, z + 0.22);
+            const pC = smoothStep(0.98, 0.0, dC) * clear;
             const center = smoothStep(0.46, 0.0, Math.abs(x));
-            const spineBand = smoothStep(-0.85, -0.05, z) * smoothStep(0.55, -0.12, z) * (needsHeadClearance(headCode) ? headClear : 1);
+            const narrow = smoothStep(0.24, 0.0, Math.abs(x));
+            const spineBand = smoothStep(-0.95, -0.18, z) * smoothStep(0.62, -0.08, z) * clear;
+            const fullBand = smoothStep(-1.0, -0.25, z) * smoothStep(0.72, -0.04, z) * clear;
 
             if (primitive === 'bulbCluster' && pC > 0) {
-                const grooves = 1.0 + 0.15 * Math.sin(Math.abs(Math.atan2(x, z + 0.3)) * 6);
-                const ease = Math.pow(pC, 1.5) * grooves;
-                const cap = smoothStep(-0.75, 0.15, z);
-                addVec(out, nx * ease * 1.62, ny * ease * 1.52 + ease * 0.52, nz * ease * 1.22 * cap, pC);
+                const bulbs = [
+                    ellipsoidField(x, y, z, 0.0, 0.82, -0.28, 0.36, 0.36, 0.32),
+                    ellipsoidField(x, y, z, 0.34, 0.76, -0.42, 0.3, 0.34, 0.3),
+                    ellipsoidField(x, y, z, -0.34, 0.76, -0.42, 0.3, 0.34, 0.3),
+                    ellipsoidField(x, y, z, 0.26, 0.84, 0.02, 0.28, 0.34, 0.28),
+                    ellipsoidField(x, y, z, -0.26, 0.84, 0.02, 0.28, 0.34, 0.28)
+                ];
+                const p = Math.max(...bulbs) * clear;
+                const groove = 1 + Math.abs(Math.sin(Math.atan2(x, z + 0.26) * 7)) * 0.22;
+                const ease = Math.pow(p, 0.72) * groove;
+                addVec(out, nx * ease * 1.32, ny * ease * 1.18 + ease * 1.0, nz * ease * 1.05, p);
             } else if (primitive === 'craterMound' && pC > 0) {
-                const ease = Math.pow(pC, 1.2);
-                const crater = Math.sin(pC * Math.PI) * 0.92;
-                const rim = smoothStep(0.42, 0.78, pC) * smoothStep(1.0, 0.58, pC);
-                addVec(out, nx * ease * 0.58, ease * 2.2 + rim * 0.5 - crater * pC * 2.75, nz * ease * 0.58, pC);
+                const craterDist = Math.hypot(x * 1.35, z + 0.18);
+                const mound = pC;
+                const rim = smoothStep(0.54, 0.32, craterDist) * smoothStep(0.08, 0.28, craterDist) * clear;
+                const vent = smoothStep(0.22, 0.0, craterDist) * pC;
+                addVec(out, nx * mound * 0.9 + x * rim * 0.44, mound * 1.1 + rim * 2.9 - vent * 1.65, nz * mound * 0.72 + (z + 0.18) * rim * 0.4, Math.max(mound, rim));
             } else if (primitive === 'branchingCoral') {
                 const dS = Math.abs(x);
-                if (dS < 0.68 && z > -0.88 && z < 0.55) {
-                    const p = smoothStep(0.68, 0.0, dS) * smoothStep(-0.88, -0.08, z) * smoothStep(0.55, -0.08, z);
-                    const branches = Math.max(0, Math.sin(Math.abs(x) * 22) * Math.cos(z * 18) + Math.sin(y * 24) * 0.6);
-                    const ease = p * (0.74 + branches * 2.05);
-                    addVec(out, nx * ease * 0.72, ease * 1.95, nz * ease * 0.72, p);
+                if (dS < 0.74 && z > -0.94 && z < 0.58) {
+                    const trunk = smoothStep(0.2, 0.0, dS) * fullBand;
+                    const branchMask = Math.max(0, Math.sin(Math.abs(x) * 18 + z * 7) * Math.cos(z * 16) + Math.sin(y * 28) * 0.35);
+                    const branch = Math.pow(branchMask, 1.3) * smoothStep(0.74, 0.08, dS) * fullBand;
+                    const ease = trunk * 1.2 + branch * 2.15;
+                    addVec(out, nx * ease * 0.9 + Math.sign(x || 1) * branch * 0.28, ease * 2.15, nz * ease * 0.85, Math.max(trunk, branch));
                 }
             } else if (primitive === 'sineDorsalFin') {
-                const p = smoothStep(0.26, 0.0, Math.abs(x)) * spineBand;
-                const finWave = 0.42 + 0.58 * Math.pow(Math.abs(Math.sin(z * 6.6)), 0.9);
-                addVec(out, 0, p * finWave * 2.65, -p * 0.12, p * finWave);
+                const p = narrow * fullBand;
+                const finWave = 0.55 + 0.45 * Math.sin((z + 0.82) * 8.2);
+                const rib = Math.abs(Math.sin((z + 0.65) * 22)) * p;
+                addVec(out, Math.sin(z * 7.5) * p * 0.22, p * (2.2 + finWave * 1.15) + rib * 0.34, -p * 0.18, p);
             } else if (primitive === 'sharpPlateRow' || primitive === 'stegosaurusPlates') {
-                const rhythm = primitive === 'stegosaurusPlates' ? 3.2 : 4.3;
-                const plateRhythm = Math.pow(Math.max(0, Math.sin((z + 0.92) * Math.PI * rhythm)), 1.08);
-                const p = center * spineBand * plateRhythm;
-                addVec(out, nx * p * 0.36, p * (primitive === 'stegosaurusPlates' ? 2.85 : 2.18), nz * p * 0.26, p);
+                const rhythm = primitive === 'stegosaurusPlates' ? 3.0 : 4.8;
+                const plateRhythm = Math.pow(Math.max(0, Math.sin((z + 0.92) * Math.PI * rhythm)), primitive === 'stegosaurusPlates' ? 0.88 : 1.22);
+                const p = narrow * fullBand * plateRhythm;
+                const lean = Math.sin((z + 0.4) * 9) * p * 0.32;
+                addVec(out, nx * p * (primitive === 'stegosaurusPlates' ? 0.88 : 0.42) + lean, p * (primitive === 'stegosaurusPlates' ? 3.45 : 2.85), nz * p * 0.36 - p * 0.08, p);
             } else if (primitive === 'mushroomCap') {
-                const p = pC * smoothStep(0.05, 0.75, y);
-                const brim = smoothStep(0.1, 0.82, Math.abs(x)) * p * 0.52;
-                addVec(out, x * p * 1.45, p * 1.26 - brim * 0.34, (z + 0.25) * p * 1.12, p);
+                const cap = ellipsoidField(x, y, z, 0, 0.82, -0.2, 0.72, 0.52, 0.64) * clear;
+                const umbrella = Math.pow(cap, 0.54);
+                const radial = Math.hypot(x * 0.9, z + 0.2);
+                const scallop = 0.78 + Math.abs(Math.sin(Math.atan2(x, z + 0.2) * 9)) * 0.42;
+                const brim = smoothStep(0.2, 0.76, radial) * cap;
+                const underside = smoothStep(0.22, -0.14, y - 0.58) * brim;
+                addVec(out, x * umbrella * 2.45 * scallop, umbrella * 1.55 - brim * 0.68 - underside * 0.32, (z + 0.2) * umbrella * 2.05 * scallop, cap);
             } else if (primitive === 'crystalVein') {
-                let b = Math.max(0, Math.cos(x * Math.PI * 4) * Math.sin(zNorm * Math.PI * 3.5) - 0.2);
-                b = Math.pow(b, 2.7) * spineBand;
-                addVec(out, nx * b * 1.24, b * 2.55, nz * b * 1.24, b);
+                const shardRhythm = Math.max(0, Math.sin((z + 0.88) * 18) + Math.cos(x * 14) * 0.35 - 0.18);
+                const b = Math.pow(shardRhythm, 2.1) * smoothStep(0.36, 0.0, Math.abs(x)) * fullBand;
+                addVec(out, nx * b * 1.48 + Math.sign(x || 1) * b * 0.18, b * 3.05, nz * b * 1.36, b);
             } else if (primitive === 'fluffPuffs') {
-                let b = Math.max(0, Math.sin(x * 16) * Math.sin(y * 12) * Math.cos(z * 12));
-                b = Math.pow(b, 0.66) * pC;
-                addVec(out, nx * b * 0.9, ny * b * 0.76 + b * 0.65, nz * b * 0.9, b);
+                const rowA = Math.max(
+                    ellipsoidField(x, y, z, 0.22, 0.84, -0.58, 0.18, 0.42, 0.22),
+                    ellipsoidField(x, y, z, -0.22, 0.84, -0.58, 0.18, 0.42, 0.22),
+                    ellipsoidField(x, y, z, 0.3, 0.9, -0.18, 0.2, 0.44, 0.24),
+                    ellipsoidField(x, y, z, -0.3, 0.9, -0.18, 0.2, 0.44, 0.24),
+                    ellipsoidField(x, y, z, 0.18, 0.86, 0.24, 0.18, 0.4, 0.2),
+                    ellipsoidField(x, y, z, -0.18, 0.86, 0.24, 0.18, 0.4, 0.2)
+                ) * clear;
+                const tendril = rowA * (0.72 + Math.abs(Math.sin((x + z) * 18)) * 0.52);
+                addVec(out, nx * tendril * 1.3 + x * tendril * 0.42, tendril * 2.55, nz * tendril * 1.2, tendril);
             } else if (primitive === 'shellCap') {
-                const p = pC * smoothStep(-0.72, 0.18, z);
-                const edge = smoothStep(0.5, 0.82, Math.abs(x)) * p;
-                const grooves = 1.0 + Math.abs(Math.sin(x * 12)) * 0.24;
-                addVec(out, nx * p * 1.55 * grooves, p * 1.08 + edge * 0.3, nz * p * 0.78 * grooves, p);
+                const p = pC * smoothStep(-0.82, 0.28, z);
+                const edge = smoothStep(0.48, 0.82, Math.abs(x)) * p + smoothStep(0.48, 0.85, Math.abs(z + 0.18)) * p;
+                const grooves = 1.0 + Math.abs(Math.sin(x * 13)) * 0.32 + Math.abs(Math.sin((z + 0.2) * 10)) * 0.12;
+                addVec(out, nx * p * 1.82 * grooves, p * 0.95 + edge * 0.62, nz * p * 1.08 * grooves, p);
             } else if (primitive === 'singleBackHorn') {
-                const p = ellipsoidField(x, y, z, 0, 0.7, -0.05, 0.22, 0.32, 0.35);
-                const sharp = Math.pow(p, 2.3);
-                addVec(out, 0, sharp * 3.1, -sharp * 0.72, p);
+                const p = ellipsoidField(x, y, z, 0, 0.68, -0.1, 0.2, 0.36, 0.38) * clear;
+                const sharp = Math.pow(p, 1.95);
+                addVec(out, Math.sin(z * 5) * sharp * 0.16, sharp * 3.45, -sharp * 1.15, p);
             } else if (primitive === 'dualSpikeRows') {
                 const row = Math.max(
-                    ellipsoidField(x, y, z, 0.28, 0.55, -0.1, 0.16, 0.28, 0.62),
-                    ellipsoidField(x, y, z, -0.28, 0.55, -0.1, 0.16, 0.28, 0.62)
-                );
-                const p = row * spineBand;
-                const tooth = 0.42 + 0.58 * Math.abs(Math.sin(z * 10));
-                addVec(out, nx * p * 0.62, p * tooth * 2.36, nz * p * 0.48, p * tooth);
+                    ellipsoidField(x, y, z, 0.28, 0.84, -0.15, 0.14, 0.52, 0.78),
+                    ellipsoidField(x, y, z, -0.28, 0.84, -0.15, 0.14, 0.52, 0.78)
+                ) * fullBand;
+                const tooth = Math.pow(0.2 + 0.8 * Math.abs(Math.sin((z + 0.76) * 17)), 1.65);
+                const p = row * tooth;
+                addVec(out, nx * p * 0.74 + Math.sin(z * 13) * p * 0.12, p * 3.95, nz * p * 0.58 - p * 0.26, p);
             } else if (primitive === 'softRidgeCrest') {
-                const p = center * spineBand * (0.36 + 0.64 * Math.abs(Math.sin(z * 7.5)));
-                addVec(out, 0, p * 1.95, Math.sin(z * 9) * p * 0.42, p);
+                const p = center * fullBand * (0.45 + 0.55 * Math.abs(Math.sin(z * 6.8)));
+                const sway = Math.sin((z + 0.2) * 9) * p;
+                addVec(out, sway * 0.48, p * 2.38, sway * 0.32, p);
             } else if (primitive === 'bubbleCluster') {
-                let b = Math.max(0, Math.cos(x * Math.PI * 4) * Math.sin(zNorm * Math.PI * 4) - 0.08);
-                b = Math.pow(b, 0.74) * (0.55 + 0.45 * pC);
-                addVec(out, nx * b * 0.95, ny * b * 0.82 + b * 0.34, nz * b * 0.95, b);
+                const rows = Math.max(
+                    ellipsoidField(x, y, z, 0.26, 0.78, -0.54, 0.28, 0.48, 0.28),
+                    ellipsoidField(x, y, z, -0.26, 0.78, -0.54, 0.28, 0.48, 0.28),
+                    ellipsoidField(x, y, z, 0.36, 0.86, -0.14, 0.3, 0.5, 0.28),
+                    ellipsoidField(x, y, z, -0.36, 0.86, -0.14, 0.3, 0.5, 0.28),
+                    ellipsoidField(x, y, z, 0.22, 0.8, 0.22, 0.26, 0.44, 0.24),
+                    ellipsoidField(x, y, z, -0.22, 0.8, 0.22, 0.26, 0.44, 0.24),
+                    ellipsoidField(x, y, z, 0, 0.92, -0.34, 0.34, 0.42, 0.28)
+                ) * clear;
+                const b = Math.pow(rows, 0.46);
+                const knuckle = b * (0.84 + Math.abs(Math.sin((z + x) * 15)) * 0.22);
+                addVec(out, nx * knuckle * 1.9 + x * knuckle * 0.5, knuckle * 1.18, nz * knuckle * 1.55, knuckle);
             } else if (primitive === 'fatSpikeGrid') {
-                let b = Math.max(0, Math.cos(x * Math.PI * 2.6) * Math.sin(zNorm * Math.PI * 3.2) - 0.18);
-                b = Math.pow(b, 1.45) * spineBand;
-                addVec(out, nx * b * 1.35, ny * b * 1.0 + b * 0.86, nz * b * 1.35, b);
+                let b = Math.max(0, Math.cos(x * Math.PI * 5.2) * Math.sin((zNorm + 0.08) * Math.PI * 4.2) - 0.1);
+                b = Math.pow(b, 1.18) * fullBand * smoothStep(0.68, 0.02, Math.abs(x));
+                addVec(out, nx * b * 1.7, b * 2.35, nz * b * 1.7, b);
             } else {
                 let b = Math.max(0, Math.cos(x * Math.PI * 2.5) * Math.sin(zNorm * Math.PI * 3.0) - 0.2);
                 b = Math.pow(b, 1.5);
