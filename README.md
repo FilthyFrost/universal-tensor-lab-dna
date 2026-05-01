@@ -4,17 +4,19 @@ Single-file Three.js procedural creature generator for low-poly vinyl-toy style 
 
 ## Current Snapshot
 
-- Version: Universal Tensor Lab v29.0
+- Version: Universal Tensor Lab v30.0
 - Main file: `index.html`
 - Runtime: static HTML served over HTTP
 - Asset export: GLB zipped in-browser with JSZip and Three.js `GLTFExporter`
 
-## v29 Direction
+## v30 Direction
 
-The generator is moving from raw parameter mutation toward a visual-contract and morphology-primitive workflow:
+The generator has moved from conservative parameter variants toward a wild mutation silhouette workflow:
 
 - each metadata state declares a first-read silhouette goal
 - each head, side, and dorsal metadata state maps to an explicit morphology primitive
+- each chassis code now owns a body silhouette primitive, not just scale values
+- head, side, and dorsal primitives use stronger, less homogeneous displacement fields
 - head traits own protected front silhouette zones
 - side and dorsal traits are clipped behind protected head zones
 - procedural patterns are masked away from high-displacement organ tips

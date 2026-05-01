@@ -7,11 +7,11 @@ This repository is the cloud checkpoint for Universal Tensor Lab.
 - Repository: https://github.com/FilthyFrost/universal-tensor-lab-dna
 - Branch: `main`
 - App entry: `index.html`
-- Current checkpoint: `v29.0`
+- Current checkpoint: `v30.0`
 
 ## Important Context
 
-`v29.0` is a checkpoint, not the final visual direction. The latest user feedback is that the generator became too ordinary and too conservative. The next iteration should push back toward extreme, weird, high-contrast mutations.
+`v30.0` is the first wild-mutation pass after the user rejected the conservative v29 direction. The latest target is not subtle refinement: the generator should produce extreme, weird, high-contrast mutations with clearly different biological routes.
 
 Primary product goal:
 
@@ -30,6 +30,7 @@ Hard technical constraints:
 ## Current Implementation Notes
 
 - `index.html` contains the Three.js generator.
+- `applyBodyBlueprint` gives chassis codes distinct body silhouettes instead of only scale values.
 - `HEAD_PRIMITIVES`, `SIDE_PRIMITIVES`, and `DORSAL_PRIMITIVES` map DNA metadata to visual primitive families.
 - `HEAD_CONTRACTS` describes first-read silhouette goals.
 - `tools/qa-atlas.mjs` generates the fixed screenshot atlas.
@@ -63,7 +64,7 @@ qa-atlas/latest/index.html
 
 ## Recommended Next Task
 
-Implement `v30 Wild Mutation Silhouette Engine`.
+Continue tuning `v30 Wild Mutation Silhouette Engine`.
 
 Do not make the generator more normalized. Instead:
 

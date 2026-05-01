@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>万向张量大图鉴 v29.0 (Morphology Primitive Lab)</title>
+    <title>万向张量大图鉴 v30.0 (Wild Mutation Silhouette Engine)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Nunito', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background 0.8s ease; }
@@ -93,7 +93,7 @@
     <div id="canvas-container"></div>
     
     <div id="ui-layer" id="ui-box">
-        <h1>✨ Universal Tensor Lab v29.0</h1>
+        <h1>✨ Universal Tensor Lab v30.0</h1>
         <div class="dna-board" id="dna-board"></div>
         <div class="btn-group">
             <button class="btn-random" id="btn-randomize">🧬 随机科学实验</button>
@@ -292,6 +292,100 @@
             return smoothStep(1, 0, d);
         }
 
+        function applyBodyBlueprint(x, y, z, code, shp, taper) {
+            const radialXZ = Math.hypot(x, z);
+            const angle = Math.atan2(x, z);
+            let baseX = x * taper * shp.sx;
+            let baseY = y * taper * shp.sy;
+            let baseZ = z * shp.sz;
+
+            if (code === 'AA') {
+                const headBulb = smoothStep(-0.15, 0.9, y);
+                const foot = smoothStep(-0.45, -0.92, y);
+                baseX *= 1.0 - headBulb * 0.22 + foot * 0.45;
+                baseZ *= 1.0 - headBulb * 0.16 + foot * 0.26;
+                baseY += headBulb * 0.28;
+            } else if (code === 'AT') {
+                const rim = smoothStep(0.34, 0.95, radialXZ);
+                baseX *= 1.12 + rim * 0.45;
+                baseZ *= 1.05 + rim * 0.36;
+                baseY *= 0.72 - rim * 0.18;
+            } else if (code === 'AC') {
+                const beanBend = Math.sin((z + 0.18) * Math.PI) * 0.22 * smoothStep(0.05, 0.88, radialXZ);
+                baseX += beanBend;
+                baseY += Math.cos(z * Math.PI * 1.2) * 0.08;
+                baseZ *= 1.08;
+            } else if (code === 'AG') {
+                const frontLift = smoothStep(0.15, 0.95, z);
+                const tailSink = smoothStep(-0.1, -0.95, z);
+                baseZ *= 1.26;
+                baseX *= 0.92 + smoothStep(-0.8, 0.8, z) * 0.28;
+                baseY += frontLift * 0.16 - tailSink * 0.12;
+            } else if (code === 'TA') {
+                baseX *= 1.0 + Math.pow(Math.abs(x), 1.6) * 0.34;
+                baseZ *= 1.0 + Math.pow(Math.abs(z), 1.6) * 0.22;
+                baseY += smoothStep(0.45, 0.94, y) * 0.16 - smoothStep(-0.35, -0.95, y) * 0.08;
+            } else if (code === 'TT') {
+                const puffy = 1.08 + smoothStep(0.15, 0.95, radialXZ) * 0.12;
+                baseX *= puffy;
+                baseY *= 1.08;
+                baseZ *= puffy;
+            } else if (code === 'TC') {
+                const arms = Math.pow(Math.max(0, Math.cos(angle * 5)), 1.7) * smoothStep(0.18, 0.98, radialXZ);
+                baseX *= 1.0 + arms * 0.78;
+                baseZ *= 1.0 + arms * 0.78;
+                baseY *= 0.58 - arms * 0.06;
+            } else if (code === 'TG') {
+                const nose = smoothStep(0.1, 0.95, z);
+                const tail = smoothStep(-0.1, -0.95, z);
+                baseZ *= 1.32;
+                baseX *= 1.0 - nose * 0.38 + tail * 0.24;
+                baseY *= 0.9 - nose * 0.22;
+            } else if (code === 'CA') {
+                const top = smoothStep(0.22, 0.88, y);
+                baseX *= 1.0 + top * 0.26;
+                baseZ *= 1.0 - top * 0.08;
+                baseY += top * 0.18;
+            } else if (code === 'CT') {
+                const endTaper = smoothStep(0.45, 0.98, Math.abs(z));
+                baseZ *= 1.2;
+                baseX *= 1.0 - endTaper * 0.5;
+                baseY *= 1.0 - endTaper * 0.24;
+            } else if (code === 'CC') {
+                const frontMass = smoothStep(0.0, 0.95, z);
+                baseX *= 1.0 + frontMass * 0.42;
+                baseY *= 1.0 + frontMass * 0.32;
+                baseZ *= 0.96 + frontMass * 0.12;
+            } else if (code === 'CG') {
+                const rim = smoothStep(0.32, 0.95, radialXZ);
+                baseX *= 1.18 + rim * 0.56;
+                baseZ *= 1.18 + rim * 0.56;
+                baseY *= 0.58 - rim * 0.16;
+            } else if (code === 'GA') {
+                const crescent = Math.sin((z + 0.55) * Math.PI) * 0.16;
+                baseX *= 1.0 + smoothStep(0.12, 0.82, Math.abs(x)) * 0.18;
+                baseY += crescent * smoothStep(-0.8, 0.65, z);
+                baseZ *= 0.96;
+            } else if (code === 'GT') {
+                const waist = smoothStep(0.08, 0.0, Math.abs(z));
+                const lobes = smoothStep(0.18, 0.9, Math.abs(z));
+                baseX *= 1.0 - waist * 0.36 + lobes * 0.24;
+                baseY *= 1.0 - waist * 0.18 + lobes * 0.12;
+            } else if (code === 'GC') {
+                const sideCaps = smoothStep(0.35, 0.94, Math.abs(x));
+                baseX *= 1.0 + sideCaps * 0.46;
+                baseY += sideCaps * 0.16 - smoothStep(0.0, 0.92, Math.abs(z)) * 0.08;
+                baseZ *= 0.92;
+            } else if (code === 'GG') {
+                const hulking = smoothStep(0.08, 0.92, radialXZ);
+                baseX *= 1.12 + hulking * 0.24;
+                baseY *= 1.16 + hulking * 0.18;
+                baseZ *= 1.12 + hulking * 0.24;
+            }
+
+            return { x: baseX, y: baseY, z: baseZ };
+        }
+
         function getHeadContract(code) {
             return HEAD_CONTRACTS[code] || { firstRead: '通用头部突变', protectedZone: 'front-medium', patternPolicy: 'protect-organ', markerPolicy: 'none' };
         }
@@ -312,45 +406,55 @@
             const primitive = HEAD_PRIMITIVES[code] || 'tensorFallback';
 
             if (primitive === 'sweptTubeTrunk') {
-                const center = smoothStep(0.42, 0.06, Math.abs(x));
-                const front = smoothStep(0.45, 0.98, z);
-                const low = smoothStep(0.72, -0.38, y);
-                const tube = center * front * low;
-                const tipPad = tube * smoothStep(-0.05, -0.68, y);
-                addVec(out, -x * tube * 0.24 + x * tipPad * 0.34, -tube * 1.45 - tipPad * 0.22, tube * 1.55 + tipPad * 0.16, tube);
+                const center = smoothStep(0.5, 0.04, Math.abs(x));
+                const front = smoothStep(0.32, 1.0, z);
+                const low = smoothStep(0.82, -0.55, y);
+                const tube = Math.pow(center * front * low, 0.78);
+                const tipPad = tube * smoothStep(-0.1, -0.76, y);
+                const nasalRidge = smoothStep(0.16, 0.0, Math.abs(x)) * front * smoothStep(0.55, -0.38, y);
+                addVec(out, -x * tube * 0.42 + x * tipPad * 0.56, -tube * 1.85 - tipPad * 0.26, tube * 2.05 + tipPad * 0.24, tube);
+                addVec(out, 0, nasalRidge * 0.14, nasalRidge * 0.32, nasalRidge);
                 return out;
             }
 
             if (primitive === 'singleFlame') {
-                const p = ellipsoidField(x, y, z, 0, 0.72, 0.58, 0.36, 0.34, 0.34);
-                const flame = Math.sin(y * 13 + z * 9) * Math.pow(p, 1.2) * 0.24;
-                addVec(out, x * p * 0.12 + flame, p * 2.15, -p * 0.22, p);
+                const p = ellipsoidField(x, y, z, 0, 0.68, 0.56, 0.42, 0.44, 0.36);
+                const tall = Math.pow(p, 0.85);
+                const lick = Math.sin(y * 15 + z * 8 + x * 5) * Math.pow(p, 1.35) * 0.34;
+                addVec(out, x * tall * 0.08 + lick, tall * 2.75, -tall * 0.28 + Math.cos(y * 11) * p * 0.12, p);
                 return out;
             }
 
             if (primitive === 'brainFoldCap') {
-                const p = ellipsoidField(x, y, z, 0, 0.74, 0.35, 0.72, 0.36, 0.55);
-                const folds = Math.sin(x * 18) * Math.cos(z * 15) * 0.2 * p;
-                addVec(out, x * p * 0.48 + folds, p * 0.95, z * p * 0.18, p);
+                const p = ellipsoidField(x, y, z, 0, 0.66, 0.35, 0.82, 0.44, 0.62);
+                const foldA = Math.sin(x * 20 + z * 5) * Math.cos(z * 16) * 0.28 * p;
+                const foldB = Math.cos(x * 12 - y * 9) * 0.18 * p;
+                addVec(out, x * p * 0.72 + foldA, p * 1.18 + Math.abs(foldB) * 0.28, z * p * 0.22 + foldB * 0.2, p);
                 return out;
             }
 
             if (primitive === 'forkedCrown') {
-                const center = Math.pow(ellipsoidField(x, y, z, 0, 0.78, 0.42, 0.18, 0.34, 0.24), 1.3);
-                addVec(out, x * center * 0.24, center * 1.65, -center * 0.08, center);
-                for (let sign of [1, -1]) {
-                    const fork = Math.pow(ellipsoidField(x, y, z, sign * 0.22, 0.68, 0.38, 0.18, 0.28, 0.24), 1.55);
-                    addVec(out, sign * fork * 0.55, fork * 1.35, -fork * 0.06, fork);
+                const prongs = [
+                    { x: 0, y: 0.78, z: 0.42, h: 2.25, s: 0.16 },
+                    { x: -0.32, y: 0.62, z: 0.34, h: 1.75, s: 0.18 },
+                    { x: 0.32, y: 0.62, z: 0.34, h: 1.75, s: 0.18 },
+                    { x: -0.14, y: 0.68, z: 0.58, h: 1.45, s: 0.14 },
+                    { x: 0.14, y: 0.68, z: 0.58, h: 1.45, s: 0.14 }
+                ];
+                for (const prong of prongs) {
+                    const p = ellipsoidField(x, y, z, prong.x, prong.y, prong.z, prong.s, 0.36, 0.22);
+                    const spike = Math.pow(p, 1.62);
+                    addVec(out, (x - prong.x) * spike * 0.2 + prong.x * spike * 0.55, spike * prong.h, -spike * 0.1, p);
                 }
                 return out;
             }
 
             if (primitive === 'spiralPetalCrown') {
-                const p = ellipsoidField(x, y, z, 0, 0.72, 0.5, 0.62, 0.34, 0.5);
-                const angle = Math.atan2(x, z - 0.5);
-                const petal = Math.max(0, Math.sin(angle * 5 + p * 3.4));
-                const bloom = Math.pow(p, 1.2) * (0.55 + petal * 0.55);
-                addVec(out, Math.sin(angle) * bloom * 0.55, bloom * 1.05, Math.cos(angle) * bloom * 0.4 - bloom * 0.1, bloom);
+                const p = ellipsoidField(x, y, z, 0, 0.62, 0.45, 0.78, 0.46, 0.62);
+                const angle = Math.atan2(x, z - 0.44);
+                const petal = Math.pow(Math.max(0, Math.sin(angle * 5 + p * 4.8)), 0.7);
+                const bloom = Math.pow(p, 0.88) * (0.45 + petal * 0.95);
+                addVec(out, Math.sin(angle) * bloom * 0.92, bloom * 1.34, Math.cos(angle) * bloom * 0.72 - bloom * 0.12, bloom);
                 return out;
             }
 
@@ -359,57 +463,61 @@
                 let lx = 0, ly = 0, lz = 0;
 
                 if (primitive === 'roundDiscPair') {
-                    const cx = sign * 0.54, cy = 0.42, cz = 0.54;
-                    p = ellipsoidField(x, y, z, cx, cy, cz, 0.48, 0.4, 0.28);
+                    const cx = sign * 0.42, cy = 0.58, cz = 0.5;
+                    p = ellipsoidField(x, y, z, cx, cy, cz, 0.42, 0.48, 0.32);
                     lx = x - cx; ly = y - cy; lz = z - cz;
-                    const disk = Math.pow(p, 0.48);
-                    const rimRound = 0.65 + 0.35 * smoothStep(0.44, 0.04, Math.hypot(lx, ly));
-                    addVec(out, sign * disk * 0.98 + lx * p * 0.18, ly * p * 0.44 + disk * 0.16, -lz * p * 1.02 - p * 0.06, p * rimRound);
+                    const disk = Math.pow(p, 0.72);
+                    const roundFace = 0.65 + 0.35 * smoothStep(0.42, 0.04, Math.hypot(lx, ly));
+                    addVec(out, sign * disk * 0.98 + lx * p * 0.18, ly * p * 0.34 + disk * 0.56, -lz * p * 0.85 - disk * 0.04, p * roundFace);
                 } else if (primitive === 'triEarPair') {
-                    const cx = sign * 0.34, cy = 0.56, cz = 0.58;
-                    p = ellipsoidField(x, y, z, cx, cy, cz, 0.34, 0.31, 0.26);
+                    const cx = sign * 0.36, cy = 0.52, cz = 0.58;
+                    p = ellipsoidField(x, y, z, cx, cy, cz, 0.38, 0.34, 0.28);
                     lx = x - cx; lz = z - cz;
-                    const base = Math.pow(p, 0.58);
-                    const point = Math.pow(p, 1.85);
-                    const innerPinch = smoothStep(0.18, 0.0, Math.abs(lx)) * p * 0.12;
-                    addVec(out, sign * (0.72 * base + 0.16 * point), base * 0.5 + point * 0.45, -lz * p * 0.9 - p * 0.08 - innerPinch, p);
+                    const base = Math.pow(p, 0.52);
+                    const point = Math.pow(p, 2.15);
+                    const flare = smoothStep(0.42, 0.02, Math.hypot(lx * 0.8, lz)) * p;
+                    addVec(out, sign * (0.92 * base + 0.34 * point), base * 0.56 + point * 0.92, -lz * p * 1.05 - flare * 0.16, p);
                 } else if (primitive === 'uprightOvalEarPair') {
-                    const cx = sign * 0.28, cy = 0.61, cz = 0.52;
-                    p = ellipsoidField(x, y, z, cx, cy, cz, 0.28, 0.5, 0.24);
+                    const cx = sign * 0.27, cy = 0.58, cz = 0.5;
+                    p = ellipsoidField(x, y, z, cx, cy, cz, 0.26, 0.62, 0.23);
                     lx = x - cx; ly = y - cy; lz = z - cz;
-                    const shaft = Math.pow(p, 0.62);
-                    const tipBulb = Math.pow(p, 3.2);
-                    const lean = smoothStep(0.28, 0.95, y) * p;
-                    addVec(out, sign * (shaft * 0.28 + lean * 0.26 + lx * p * 0.22), shaft * 1.52 + tipBulb * 0.18, -shaft * 0.18 - lz * p * 0.28, p);
+                    const shaft = Math.pow(p, 0.52);
+                    const tipBulb = Math.pow(p, 3.4);
+                    const lean = smoothStep(0.15, 0.98, y) * p;
+                    addVec(out, sign * (shaft * 0.42 + lean * 0.62 + lx * p * 0.26), shaft * 2.12 + tipBulb * 0.38, -shaft * 0.16 - lz * p * 0.36, p);
                 } else if (primitive === 'shortDevilHornPair' || primitive === 'crystalHornPair') {
-                    p = ellipsoidField(x, y, z, sign * 0.28, 0.58, 0.65, 0.24, 0.28, 0.24);
-                    const sharp = Math.pow(p, primitive === 'crystalHornPair' ? 2.7 : 1.8);
-                    addVec(out, sign * sharp * (primitive === 'crystalHornPair' ? 0.42 : 0.32), sharp * (primitive === 'crystalHornPair' ? 2.05 : 1.62), sharp * 0.24, p);
+                    p = ellipsoidField(x, y, z, sign * 0.3, 0.57, 0.66, 0.25, 0.32, 0.24);
+                    const sharp = Math.pow(p, primitive === 'crystalHornPair' ? 3.1 : 1.9);
+                    const curve = primitive === 'crystalHornPair' ? 0.58 : 0.36;
+                    addVec(out, sign * sharp * curve, sharp * (primitive === 'crystalHornPair' ? 2.55 : 1.95), sharp * (primitive === 'crystalHornPair' ? 0.42 : 0.18), p);
                 } else if (primitive === 'antennaBulbPair') {
-                    p = ellipsoidField(x, y, z, sign * 0.2, 0.62, 0.58, 0.17, 0.32, 0.17);
-                    const stalk = Math.pow(p, 1.25);
-                    const bulb = Math.pow(p, 6.0);
-                    addVec(out, sign * (stalk * 0.12 + bulb * 0.75), stalk * 2.25 + bulb * 0.55, stalk * 0.08 + bulb * 0.25, p);
+                    p = ellipsoidField(x, y, z, sign * 0.2, 0.6, 0.58, 0.16, 0.38, 0.16);
+                    const stalk = Math.pow(p, 1.05);
+                    const bulb = Math.pow(p, 5.5);
+                    addVec(out, sign * (stalk * 0.18 + bulb * 1.05), stalk * 2.8 + bulb * 0.68, stalk * 0.04 + bulb * 0.28, p);
                 } else if (primitive === 'droopingWhiskerPair') {
-                    p = ellipsoidField(x, y, z, sign * 0.44, 0.18, 0.78, 0.22, 0.22, 0.24);
-                    const strand = Math.pow(p, 0.9);
-                    addVec(out, sign * strand * 2.25, -strand * 1.25, strand * 0.22, p);
+                    p = ellipsoidField(x, y, z, sign * 0.44, 0.14, 0.76, 0.24, 0.26, 0.26);
+                    const strand = Math.pow(p, 0.76);
+                    const droop = smoothStep(0.4, -0.55, y) * p;
+                    addVec(out, sign * strand * 3.0, -strand * 1.5 - droop * 0.5, strand * 0.6, p);
                 } else if (primitive === 'houndEarPair') {
-                    p = ellipsoidField(x, y, z, sign * 0.42, 0.47, 0.48, 0.36, 0.38, 0.28);
+                    p = ellipsoidField(x, y, z, sign * 0.42, 0.45, 0.48, 0.42, 0.42, 0.27);
                     lz = z - 0.48;
-                    const flap = Math.pow(p, 0.58);
-                    addVec(out, sign * flap * 0.86, -flap * 1.42, -lz * p * 0.82 - flap * 0.08, p);
+                    const flap = Math.pow(p, 0.48);
+                    addVec(out, sign * flap * 1.22, -flap * 1.82, -lz * p * 1.1 - flap * 0.1, p);
                 } else if (primitive === 'hammerheadBar') {
-                    p = ellipsoidField(x, y, z, sign * 0.48, 0.5, 0.67, 0.32, 0.25, 0.24);
-                    addVec(out, sign * p * 2.15, p * 0.06, -p * 0.08, p);
+                    p = ellipsoidField(x, y, z, sign * 0.52, 0.46, 0.66, 0.38, 0.26, 0.26);
+                    const bar = Math.pow(p, 0.72);
+                    addVec(out, sign * bar * 2.95, bar * 0.08, -bar * 0.06, p);
                 } else if (primitive === 'mothAntennaFan') {
-                    p = ellipsoidField(x, y, z, sign * 0.3, 0.62, 0.58, 0.33, 0.34, 0.25);
-                    const feather = Math.sin(Math.atan2(y - 0.62, x - sign * 0.3) * 8) * p * 0.2;
-                    addVec(out, sign * p * 1.3 + sign * feather, p * 1.15, -p * 0.36, p);
+                    p = ellipsoidField(x, y, z, sign * 0.3, 0.58, 0.58, 0.4, 0.42, 0.26);
+                    const fanAngle = Math.atan2(y - 0.58, x - sign * 0.3);
+                    const feather = Math.abs(Math.sin(fanAngle * 9)) * Math.pow(p, 0.85);
+                    addVec(out, sign * (p * 1.65 + feather * 0.44), p * 1.52 + feather * 0.38, -p * 0.48, p);
                 } else if (primitive === 'sideGillFrill') {
-                    p = ellipsoidField(x, y, z, sign * 0.44, 0.38, 0.45, 0.35, 0.2, 0.25);
-                    const frill = Math.abs(Math.sin((y + z) * 20)) * p * 0.24;
-                    addVec(out, sign * p * 1.55, p * 0.12 + frill, -p * 0.42, p);
+                    p = ellipsoidField(x, y, z, sign * 0.46, 0.34, 0.45, 0.42, 0.24, 0.28);
+                    const frill = Math.abs(Math.sin((y + z) * 24)) * Math.pow(p, 0.72);
+                    addVec(out, sign * (p * 1.9 + frill * 0.34), p * 0.04 + frill * 0.46, -p * 0.66 - frill * 0.22, p);
                 } else {
                     const tf = applyTensorField(x, y, z, params, sign);
                     addVec(out, tf.dx, tf.dy, tf.dz, tf.disp);
@@ -427,8 +535,8 @@
             for (let sign of [1, -1]) {
                 const clear = frontClearance(z, headCode);
                 const cx = sign * (params.ox || 0.82);
-                let p = ellipsoidField(x, y, z, cx, params.oy, params.oz, Math.max(0.25, params.rad), 0.55, 0.58);
-                if (primitive === 'gliderWing' || primitive === 'batMembrane' || primitive === 'butterflyDoubleLobe' || primitive === 'wideRibbonBand') p *= clear;
+                let p = ellipsoidField(x, y, z, cx, params.oy, params.oz, Math.max(0.3, params.rad * 1.04), 0.66, 0.68);
+                if (primitive === 'gliderWing' || primitive === 'batMembrane' || primitive === 'butterflyDoubleLobe' || primitive === 'wideRibbonBand' || primitive === 'angelFeatherFan') p *= clear;
                 if (p <= 0) continue;
                 const ease = Math.pow(p, params.pow);
                 const localZ = z - params.oz;
@@ -436,63 +544,66 @@
                 const localX = x - cx;
 
                 if (primitive === 'batMembrane') {
-                    const rib = Math.abs(Math.sin((localZ + 1) * 11)) * Math.pow(ease, 2.0);
-                    addVec(out, sign * (ease * 2.35 - rib * 0.55), -Math.abs(localY) * ease * 0.85 - rib * 0.25, localZ * ease * 0.25, p);
+                    const rib = Math.abs(Math.sin((localZ + 1) * 13)) * Math.pow(ease, 1.55);
+                    const scallop = Math.abs(Math.sin(localZ * 9)) * Math.pow(ease, 2.0);
+                    addVec(out, sign * (ease * 3.05 - scallop * 0.8), -Math.abs(localY) * ease * 1.05 - rib * 0.28, localZ * ease * 0.42 - scallop * 0.16, p);
                 } else if (primitive === 'leafBlade') {
                     const leaf = Math.sin(ease * Math.PI);
                     const vein = smoothStep(0.08, 0.0, Math.abs(localZ)) * ease;
-                    addVec(out, sign * ease * 2.1, -ease * 0.18 + vein * 0.18, localZ * leaf * 1.9 - ease * 0.14, p);
+                    addVec(out, sign * ease * 2.85, -ease * 0.18 + vein * 0.3, localZ * leaf * 2.35 - ease * 0.2, p);
                 } else if (primitive === 'enginePod') {
-                    const nozzle = Math.pow(ease, 2.2);
-                    addVec(out, sign * ease * 1.45, -ease * 0.04, localZ * ease * 0.7 + nozzle * 0.2, p);
+                    const nozzle = Math.pow(ease, 2.0);
+                    const intake = Math.sin(localZ * 10) * Math.pow(ease, 1.5) * 0.18;
+                    addVec(out, sign * (ease * 2.0 + nozzle * 0.55), intake, localZ * ease * 0.98 + nozzle * 0.32, p);
                 } else if (primitive === 'angelFeatherFan') {
-                    const feather = Math.abs(Math.sin((localZ + 0.2) * 13)) * Math.pow(ease, 1.5);
-                    addVec(out, sign * ease * 1.85, ease * 0.82 - feather * 0.16, -ease * 0.2 + feather * 0.36, p);
+                    const feather = Math.abs(Math.sin((localZ + 0.2) * 15)) * Math.pow(ease, 1.18);
+                    addVec(out, sign * (ease * 2.35 + feather * 0.32), ease * 1.32 - feather * 0.2, -ease * 0.35 + feather * 0.62, p);
                 } else if (primitive === 'lowFlipper') {
                     const paddle = Math.sin(ease * Math.PI);
-                    addVec(out, sign * ease * 1.9, -ease * 0.78 - Math.abs(localY) * ease * 0.18, localZ * paddle * 1.05 + ease * 0.1, p);
+                    addVec(out, sign * ease * 2.45, -ease * 1.12 - Math.abs(localY) * ease * 0.34, localZ * paddle * 1.42 + ease * 0.08, p);
                 } else if (primitive === 'gliderWing') {
                     const thin = smoothStep(0.55, 0.0, Math.abs(localY));
-                    addVec(out, sign * ease * 2.65, -ease * 0.5 * thin, localZ * ease * 0.16 - ease * 0.04, p);
+                    addVec(out, sign * ease * 3.55, -ease * 0.62 * thin, localZ * ease * 0.22 - ease * 0.06, p);
                 } else if (primitive === 'ruffleSkirt') {
-                    const skirt = ellipsoidField(x, y, z, sign * 0.82, -0.25, -0.03, 0.72, 0.24, 0.76) * clear;
-                    const wave = Math.sin((z + sign * x) * 16) * skirt * 0.16;
-                    addVec(out, sign * skirt * 1.35, -skirt * 0.42 + wave, localZ * skirt * 0.2, skirt);
+                    const skirt = ellipsoidField(x, y, z, sign * 0.82, -0.25, -0.03, 0.84, 0.28, 0.88) * clear;
+                    const wave = Math.sin((z + sign * x) * 18) * skirt * 0.32;
+                    addVec(out, sign * skirt * 2.05, -skirt * 0.62 + wave, localZ * skirt * 0.35, skirt);
                 } else if (primitive === 'sideBoneSpike') {
-                    const spike = Math.pow(ease, 2.4);
-                    addVec(out, sign * spike * 2.35, -spike * 0.05, localZ * spike * 0.12, p);
+                    const spike = Math.pow(ease, 2.15);
+                    addVec(out, sign * spike * 3.0, -spike * 0.08, localZ * spike * 0.2, p);
                 } else if (primitive === 'bubblePod') {
-                    const bubble = Math.pow(ease, 0.82);
-                    addVec(out, sign * bubble * 1.05, bubble * 0.88, bubble * 0.38 + localZ * bubble * 0.26, p);
+                    const bubble = Math.pow(ease, 0.66);
+                    addVec(out, sign * bubble * 1.42, bubble * 1.22, bubble * 0.58 + localZ * bubble * 0.38, p);
                 } else if (primitive === 'butterflyDoubleLobe') {
-                    const upper = ellipsoidField(x, y, z, sign * 0.82, 0.28, -0.1, 0.62, 0.48, 0.48) * clear;
-                    const lower = ellipsoidField(x, y, z, sign * 0.82, -0.08, 0.15, 0.62, 0.32, 0.44) * clear;
+                    const upper = ellipsoidField(x, y, z, sign * 0.82, 0.28, -0.12, 0.76, 0.56, 0.54) * clear;
+                    const lower = ellipsoidField(x, y, z, sign * 0.82, -0.12, 0.18, 0.7, 0.38, 0.48) * clear;
                     const wing = Math.max(upper, lower);
-                    addVec(out, sign * wing * 2.0, upper * 1.12 - lower * 0.35, -localZ * wing * 0.52, wing);
+                    addVec(out, sign * wing * 2.8, upper * 1.48 - lower * 0.5, -localZ * wing * 0.8, wing);
                 } else if (primitive === 'spiralSideHorn') {
                     const twistAngle = ease * params.twist;
                     const rotX = Math.cos(twistAngle) * localX - Math.sin(twistAngle) * localZ;
                     const rotZ = Math.sin(twistAngle) * localX + Math.cos(twistAngle) * localZ;
-                    addVec(out, sign * (ease * 1.8 + rotX - localX), ease * 0.1, rotZ - localZ, p);
+                    addVec(out, sign * (ease * 2.45 + (rotX - localX) * 1.2), ease * 0.18, (rotZ - localZ) * 1.25, p);
                 } else if (primitive === 'gillComb') {
-                    const gills = Math.abs(Math.sin((localZ + 0.1) * 18)) * ease;
-                    addVec(out, sign * ease * 1.15, gills * 0.7 - ease * 0.08, -gills * 0.42, p);
+                    const gills = Math.abs(Math.sin((localZ + 0.1) * 22)) * ease;
+                    addVec(out, sign * (ease * 1.55 + gills * 0.34), gills * 0.98 - ease * 0.1, -gills * 0.64, p);
                 } else if (primitive === 'cloudFloatSac') {
                     const puff = Math.max(
-                        ellipsoidField(x, y, z, sign * 0.86, 0.12, -0.24, 0.4, 0.32, 0.34),
-                        ellipsoidField(x, y, z, sign * 0.9, 0.02, 0.18, 0.38, 0.3, 0.32)
+                        ellipsoidField(x, y, z, sign * 0.86, 0.16, -0.28, 0.46, 0.36, 0.38),
+                        ellipsoidField(x, y, z, sign * 0.92, 0.0, 0.18, 0.44, 0.34, 0.36)
                     ) * clear;
-                    addVec(out, sign * puff * 1.4, puff * 0.8, localZ * puff * 0.72, puff);
+                    addVec(out, sign * puff * 1.86, puff * 1.15, localZ * puff * 0.9, puff);
                 } else if (primitive === 'foldedPanelWing') {
                     const hinge = Math.max(0, Math.sin((Math.abs(localZ) + 0.15) * 7)) * ease;
-                    addVec(out, sign * ease * 1.85, -ease * 0.45 + hinge * 0.12, -Math.abs(localZ) * ease * 0.8, p);
+                    addVec(out, sign * ease * 2.6, -ease * 0.58 + hinge * 0.22, -Math.abs(localZ) * ease * 1.1, p);
                 } else if (primitive === 'wideRibbonBand') {
-                    addVec(out, sign * ease * 2.2, -ease * 0.26, localZ * ease * 0.5, p);
+                    const ribbonWave = Math.sin(localZ * 10) * ease * 0.22;
+                    addVec(out, sign * ease * 3.65, -ease * 0.34 + ribbonWave, localZ * ease * 0.72, p);
                 } else {
-                    addVec(out, sign * ease * params.sx, ease * params.sy, localZ * Math.sin(ease * Math.PI) * params.sz, p);
+                    addVec(out, sign * ease * params.sx * 1.35, ease * params.sy * 1.35, localZ * Math.sin(ease * Math.PI) * params.sz * 1.35, p);
                     if (params.web !== 0) {
                         const web = Math.abs(Math.sin(localZ * 8.0)) * params.web;
-                        out.dx -= sign * web * Math.pow(ease, 2.0) * 1.1;
+                        out.dx -= sign * web * Math.pow(ease, 2.0) * 1.35;
                     }
                 }
             }
@@ -506,77 +617,78 @@
 
             const primitive = DORSAL_PRIMITIVES[code] || params.type;
             const headClear = frontClearance(z, headCode);
-            const dC = Math.hypot(x, y - 0.5, z + 0.3);
-            const pC = smoothStep(0.8, 0.0, dC) * (needsHeadClearance(headCode) ? headClear : 1);
-            const center = smoothStep(0.38, 0.0, Math.abs(x));
+            const dC = Math.hypot(x, y - 0.48, z + 0.26);
+            const pC = smoothStep(0.92, 0.0, dC) * (needsHeadClearance(headCode) ? headClear : 1);
+            const center = smoothStep(0.46, 0.0, Math.abs(x));
             const spineBand = smoothStep(-0.85, -0.05, z) * smoothStep(0.55, -0.12, z) * (needsHeadClearance(headCode) ? headClear : 1);
 
             if (primitive === 'bulbCluster' && pC > 0) {
                 const grooves = 1.0 + 0.15 * Math.sin(Math.abs(Math.atan2(x, z + 0.3)) * 6);
                 const ease = Math.pow(pC, 1.5) * grooves;
                 const cap = smoothStep(-0.75, 0.15, z);
-                addVec(out, nx * ease * 1.25, ny * ease * 1.25 + ease * 0.35, nz * ease * 1.0 * cap, pC);
+                addVec(out, nx * ease * 1.62, ny * ease * 1.52 + ease * 0.52, nz * ease * 1.22 * cap, pC);
             } else if (primitive === 'craterMound' && pC > 0) {
                 const ease = Math.pow(pC, 1.2);
-                const crater = Math.sin(pC * Math.PI) * 0.8;
-                addVec(out, nx * ease * 0.35, ease * 1.65 - crater * pC * 2.15, nz * ease * 0.35, pC);
+                const crater = Math.sin(pC * Math.PI) * 0.92;
+                const rim = smoothStep(0.42, 0.78, pC) * smoothStep(1.0, 0.58, pC);
+                addVec(out, nx * ease * 0.58, ease * 2.2 + rim * 0.5 - crater * pC * 2.75, nz * ease * 0.58, pC);
             } else if (primitive === 'branchingCoral') {
                 const dS = Math.abs(x);
-                if (dS < 0.6 && z > -0.8 && z < 0.5) {
-                    const p = smoothStep(0.6, 0.0, dS) * smoothStep(-0.8, -0.1, z) * smoothStep(0.5, -0.1, z);
-                    const branches = Math.max(0, Math.sin(Math.abs(x) * 18) * Math.cos(z * 16) + Math.sin(y * 22) * 0.55);
-                    const ease = p * (0.7 + branches * 1.6);
-                    addVec(out, nx * ease * 0.45, ease * 1.45, nz * ease * 0.45, p);
+                if (dS < 0.68 && z > -0.88 && z < 0.55) {
+                    const p = smoothStep(0.68, 0.0, dS) * smoothStep(-0.88, -0.08, z) * smoothStep(0.55, -0.08, z);
+                    const branches = Math.max(0, Math.sin(Math.abs(x) * 22) * Math.cos(z * 18) + Math.sin(y * 24) * 0.6);
+                    const ease = p * (0.74 + branches * 2.05);
+                    addVec(out, nx * ease * 0.72, ease * 1.95, nz * ease * 0.72, p);
                 }
             } else if (primitive === 'sineDorsalFin') {
-                const p = smoothStep(0.22, 0.0, Math.abs(x)) * spineBand;
-                const finWave = 0.55 + 0.45 * Math.pow(Math.abs(Math.sin(z * 6.0)), 1.15);
-                addVec(out, 0, p * finWave * 1.95, -p * 0.05, p * finWave);
+                const p = smoothStep(0.26, 0.0, Math.abs(x)) * spineBand;
+                const finWave = 0.42 + 0.58 * Math.pow(Math.abs(Math.sin(z * 6.6)), 0.9);
+                addVec(out, 0, p * finWave * 2.65, -p * 0.12, p * finWave);
             } else if (primitive === 'sharpPlateRow' || primitive === 'stegosaurusPlates') {
                 const rhythm = primitive === 'stegosaurusPlates' ? 3.2 : 4.3;
                 const plateRhythm = Math.pow(Math.max(0, Math.sin((z + 0.92) * Math.PI * rhythm)), 1.08);
                 const p = center * spineBand * plateRhythm;
-                addVec(out, nx * p * 0.22, p * (primitive === 'stegosaurusPlates' ? 2.05 : 1.52), nz * p * 0.16, p);
+                addVec(out, nx * p * 0.36, p * (primitive === 'stegosaurusPlates' ? 2.85 : 2.18), nz * p * 0.26, p);
             } else if (primitive === 'mushroomCap') {
                 const p = pC * smoothStep(0.05, 0.75, y);
-                const brim = smoothStep(0.15, 0.75, Math.abs(x)) * p * 0.35;
-                addVec(out, x * p * 1.0, p * 0.95 - brim * 0.2, (z + 0.25) * p * 0.78, p);
+                const brim = smoothStep(0.1, 0.82, Math.abs(x)) * p * 0.52;
+                addVec(out, x * p * 1.45, p * 1.26 - brim * 0.34, (z + 0.25) * p * 1.12, p);
             } else if (primitive === 'crystalVein') {
                 let b = Math.max(0, Math.cos(x * Math.PI * 4) * Math.sin(zNorm * Math.PI * 3.5) - 0.2);
                 b = Math.pow(b, 2.7) * spineBand;
-                addVec(out, nx * b * 0.9, b * 1.95, nz * b * 0.9, b);
+                addVec(out, nx * b * 1.24, b * 2.55, nz * b * 1.24, b);
             } else if (primitive === 'fluffPuffs') {
                 let b = Math.max(0, Math.sin(x * 16) * Math.sin(y * 12) * Math.cos(z * 12));
                 b = Math.pow(b, 0.66) * pC;
-                addVec(out, nx * b * 0.55, ny * b * 0.48 + b * 0.38, nz * b * 0.55, b);
+                addVec(out, nx * b * 0.9, ny * b * 0.76 + b * 0.65, nz * b * 0.9, b);
             } else if (primitive === 'shellCap') {
                 const p = pC * smoothStep(-0.72, 0.18, z);
-                const edge = smoothStep(0.58, 0.78, Math.abs(x)) * p;
-                const grooves = 1.0 + Math.abs(Math.sin(x * 10)) * 0.15;
-                addVec(out, nx * p * 1.1 * grooves, p * 0.8 + edge * 0.18, nz * p * 0.58 * grooves, p);
+                const edge = smoothStep(0.5, 0.82, Math.abs(x)) * p;
+                const grooves = 1.0 + Math.abs(Math.sin(x * 12)) * 0.24;
+                addVec(out, nx * p * 1.55 * grooves, p * 1.08 + edge * 0.3, nz * p * 0.78 * grooves, p);
             } else if (primitive === 'singleBackHorn') {
                 const p = ellipsoidField(x, y, z, 0, 0.7, -0.05, 0.22, 0.32, 0.35);
                 const sharp = Math.pow(p, 2.3);
-                addVec(out, 0, sharp * 2.2, -sharp * 0.48, p);
+                addVec(out, 0, sharp * 3.1, -sharp * 0.72, p);
             } else if (primitive === 'dualSpikeRows') {
                 const row = Math.max(
                     ellipsoidField(x, y, z, 0.28, 0.55, -0.1, 0.16, 0.28, 0.62),
                     ellipsoidField(x, y, z, -0.28, 0.55, -0.1, 0.16, 0.28, 0.62)
                 );
                 const p = row * spineBand;
-                const tooth = 0.55 + 0.45 * Math.abs(Math.sin(z * 9));
-                addVec(out, nx * p * 0.35, p * tooth * 1.65, nz * p * 0.28, p * tooth);
+                const tooth = 0.42 + 0.58 * Math.abs(Math.sin(z * 10));
+                addVec(out, nx * p * 0.62, p * tooth * 2.36, nz * p * 0.48, p * tooth);
             } else if (primitive === 'softRidgeCrest') {
-                const p = center * spineBand * (0.45 + 0.55 * Math.abs(Math.sin(z * 7)));
-                addVec(out, 0, p * 1.35, Math.sin(z * 8) * p * 0.22, p);
+                const p = center * spineBand * (0.36 + 0.64 * Math.abs(Math.sin(z * 7.5)));
+                addVec(out, 0, p * 1.95, Math.sin(z * 9) * p * 0.42, p);
             } else if (primitive === 'bubbleCluster') {
                 let b = Math.max(0, Math.cos(x * Math.PI * 4) * Math.sin(zNorm * Math.PI * 4) - 0.08);
                 b = Math.pow(b, 0.74) * (0.55 + 0.45 * pC);
-                addVec(out, nx * b * 0.58, ny * b * 0.56 + b * 0.18, nz * b * 0.58, b);
+                addVec(out, nx * b * 0.95, ny * b * 0.82 + b * 0.34, nz * b * 0.95, b);
             } else if (primitive === 'fatSpikeGrid') {
                 let b = Math.max(0, Math.cos(x * Math.PI * 2.6) * Math.sin(zNorm * Math.PI * 3.2) - 0.18);
                 b = Math.pow(b, 1.45) * spineBand;
-                addVec(out, nx * b * 1.0, ny * b * 0.8 + b * 0.55, nz * b * 1.0, b);
+                addVec(out, nx * b * 1.35, ny * b * 1.0 + b * 0.86, nz * b * 1.35, b);
             } else {
                 let b = Math.max(0, Math.cos(x * Math.PI * 2.5) * Math.sin(zNorm * Math.PI * 3.0) - 0.2);
                 b = Math.pow(b, 1.5);
@@ -701,7 +813,7 @@
             const cSd = currentDNA[3].join(''); const sideParams = SIDE_TENSORS[cSd];
             const cBk = currentDNA[4].join(''); const backParams = BACK_TENSORS[cBk];
             const patId = PATTERNS[BASES.indexOf(currentDNA[5][0])*4 + BASES.indexOf(currentDNA[5][1])];
-            const rand = seededRandom(hashString(`tensor-lab-v29:${dnaSignature()}`));
+            const rand = seededRandom(hashString(`tensor-lab-v30:${dnaSignature()}`));
 
             const baseColor = new THREE.Color(pal.b[Math.floor(rand() * pal.b.length)]);
             const accentColor = new THREE.Color(pal.a[Math.floor(rand() * pal.a.length)]);
@@ -740,8 +852,9 @@
 
                 let nx = x, ny = y, nz = z; let zNorm = z; 
                 
-                let taper = 0.5 + (zNorm + 1.0) / 4.0; 
-                let baseX = x * taper * shp.sx, baseY = y * taper * shp.sy, baseZ = z * shp.sz;
+                let taper = 0.5 + (zNorm + 1.0) / 4.0;
+                const bodyField = applyBodyBlueprint(x, y, z, cSh, shp, taper);
+                let baseX = bodyField.x, baseY = bodyField.y, baseZ = bodyField.z;
                 
                 let disp = 0; 
                 
