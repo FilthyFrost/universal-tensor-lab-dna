@@ -1,0 +1,13 @@
+{
+  "name": "universal-tensor-lab-dna",
+  "version": "29.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "python3 -m http.server 5173",
+    "qa:atlas": "node tools/qa-atlas.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.52.0"
+  }
+}

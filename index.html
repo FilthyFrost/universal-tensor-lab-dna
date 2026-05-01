@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>万向张量大图鉴 v27.0 (Silhouette-First Lab)</title>
+    <title>万向张量大图鉴 v29.0 (Morphology Primitive Lab)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Nunito', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background 0.8s ease; }
@@ -93,7 +93,7 @@
     <div id="canvas-container"></div>
     
     <div id="ui-layer" id="ui-box">
-        <h1>✨ Universal Tensor Lab v27.0</h1>
+        <h1>✨ Universal Tensor Lab v29.0</h1>
         <div class="dna-board" id="dna-board"></div>
         <div class="btn-group">
             <button class="btn-random" id="btn-randomize">🧬 随机科学实验</button>
@@ -109,6 +109,7 @@
         import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 
         const BASES = ['A', 'T', 'C', 'G'];
+        const DNA_CODES = BASES.flatMap(a => BASES.map(b => `${a}${b}`));
         
         let currentDNA = [
             ['A', 'C'], // 0. Element/Palette
@@ -143,6 +144,46 @@
             'GT': { n: '蛾子羽角', ox: 0.3, oy: 0.6, oz: 0.6, rad: 0.35, pow: 1.2, sx: 1.5, sy: 1.5, sz: -0.8, cav: 0, tw: 0, wv: 25.0, dr: 0, blb: 0 }, 
             'GC': { n: '大象弯鼻', ox: 0.2, oy: 0.4, oz: 0.8, rad: 0.25, pow: 1.5, sx: 0.2, sy: 0.2, sz: 2.5, cav: 0, tw: 0, wv: 0, dr: 1.5, blb: 0 },
             'GG': { n: '锤头鲨横骨', ox: 0.5, oy: 0.5, oz: 0.7, rad: 0.3, pow: 1.2, sx: 2.5, sy: 0.4, sz: 0.4, cav: 0, tw: 0, wv: 0, dr: 0, blb: 0 }
+        };
+
+        const HEAD_CONTRACTS = {
+            'AA': { firstRead: '两侧圆盘轮廓', protectedZone: 'front-wide', patternPolicy: 'protect-organ', markerPolicy: 'no-floating-ear-marker' },
+            'AT': { firstRead: '侧后短鳃片', protectedZone: 'front-medium', patternPolicy: 'protect-organ', markerPolicy: 'none' },
+            'AC': { firstRead: '长椭圆圆头兔耳，轻外倾', protectedZone: 'front-wide', patternPolicy: 'protect-organ', markerPolicy: 'no-floating-ear-marker' },
+            'AG': { firstRead: '双短尖恶魔角', protectedZone: 'front-medium', patternPolicy: 'protect-organ', markerPolicy: 'none' },
+            'TA': { firstRead: '头顶螺旋花瓣', protectedZone: 'front-medium', patternPolicy: 'protect-organ', markerPolicy: 'none' },
+            'TT': { firstRead: '多叉皇冠尖端', protectedZone: 'front-medium', patternPolicy: 'protect-organ', markerPolicy: 'none' },
+            'TC': { firstRead: '双外星触角加端部球感', protectedZone: 'front-medium', patternPolicy: 'protect-organ', markerPolicy: 'none' },
+            'TG': { firstRead: '中线摇曳火苗', protectedZone: 'front-wide', patternPolicy: 'protect-organ', markerPolicy: 'none' },
+            'CA': { firstRead: '两侧长垂胡须', protectedZone: 'front-wide', patternPolicy: 'protect-organ', markerPolicy: 'none' },
+            'CT': { firstRead: '头顶脑沟团块', protectedZone: 'front-medium', patternPolicy: 'protect-organ', markerPolicy: 'none' },
+            'CC': { firstRead: '短三角猫耳，向外张开', protectedZone: 'front-wide', patternPolicy: 'protect-organ', markerPolicy: 'no-floating-ear-marker' },
+            'CG': { firstRead: '双水晶锐角', protectedZone: 'front-medium', patternPolicy: 'protect-organ', markerPolicy: 'none' },
+            'GA': { firstRead: '下垂猎犬耳', protectedZone: 'front-wide', patternPolicy: 'protect-organ', markerPolicy: 'none' },
+            'GT': { firstRead: '蛾子羽角扇状边缘', protectedZone: 'front-medium', patternPolicy: 'protect-organ', markerPolicy: 'none' },
+            'GC': { firstRead: '前下方长鼻加鼻孔', protectedZone: 'front-wide', patternPolicy: 'protect-organ', markerPolicy: 'nostrils-only' },
+            'GG': { firstRead: '锤头鲨横向头骨', protectedZone: 'front-wide', patternPolicy: 'protect-organ', markerPolicy: 'none' }
+        };
+
+        const HEAD_PRIMITIVES = {
+            'AA': 'roundDiscPair', 'AT': 'sideGillFrill', 'AC': 'uprightOvalEarPair', 'AG': 'shortDevilHornPair',
+            'TA': 'spiralPetalCrown', 'TT': 'forkedCrown', 'TC': 'antennaBulbPair', 'TG': 'singleFlame',
+            'CA': 'droopingWhiskerPair', 'CT': 'brainFoldCap', 'CC': 'triEarPair', 'CG': 'crystalHornPair',
+            'GA': 'houndEarPair', 'GT': 'mothAntennaFan', 'GC': 'sweptTubeTrunk', 'GG': 'hammerheadBar'
+        };
+
+        const SIDE_PRIMITIVES = {
+            'AA': 'none', 'AT': 'batMembrane', 'AC': 'leafBlade', 'AG': 'enginePod',
+            'TA': 'angelFeatherFan', 'TT': 'lowFlipper', 'TC': 'gliderWing', 'TG': 'ruffleSkirt',
+            'CA': 'sideBoneSpike', 'CT': 'bubblePod', 'CC': 'butterflyDoubleLobe', 'CG': 'spiralSideHorn',
+            'GA': 'gillComb', 'GT': 'cloudFloatSac', 'GC': 'foldedPanelWing', 'GG': 'wideRibbonBand'
+        };
+
+        const DORSAL_PRIMITIVES = {
+            'AA': 'smooth', 'AT': 'bulbCluster', 'AC': 'branchingCoral', 'AG': 'sharpPlateRow',
+            'TA': 'fatSpikeGrid', 'TT': 'craterMound', 'TC': 'mushroomCap', 'TG': 'sineDorsalFin',
+            'CA': 'bubbleCluster', 'CT': 'crystalVein', 'CC': 'stegosaurusPlates', 'CG': 'fluffPuffs',
+            'GA': 'shellCap', 'GT': 'singleBackHorn', 'GC': 'dualSpikeRows', 'GG': 'softRidgeCrest'
         };
 
         const SIDE_TENSORS = {
@@ -251,20 +292,26 @@
             return smoothStep(1, 0, d);
         }
 
+        function getHeadContract(code) {
+            return HEAD_CONTRACTS[code] || { firstRead: '通用头部突变', protectedZone: 'front-medium', patternPolicy: 'protect-organ', markerPolicy: 'none' };
+        }
+
         function needsHeadClearance(code) {
-            return code === 'AA' || code === 'AC' || code === 'CC' || code === 'GC' || code === 'TG';
+            return getHeadContract(code).protectedZone !== 'none';
         }
 
         function frontClearance(z, code) {
-            if (!needsHeadClearance(code)) return smoothStep(0.48, 0.12, z);
-            // Iconic head traits need the whole front silhouette. Keep side/dorsal traits mostly behind them.
-            return smoothStep(-0.08, -0.72, z);
+            const zone = getHeadContract(code).protectedZone;
+            if (zone === 'front-wide') return smoothStep(-0.08, -0.72, z);
+            if (zone === 'front-medium') return smoothStep(0.28, -0.42, z);
+            return smoothStep(0.48, 0.12, z);
         }
 
         function applyHeadBlueprint(x, y, z, code, params) {
             const out = { dx: 0, dy: 0, dz: 0, disp: 0 };
+            const primitive = HEAD_PRIMITIVES[code] || 'tensorFallback';
 
-            if (code === 'GC') {
+            if (primitive === 'sweptTubeTrunk') {
                 const center = smoothStep(0.42, 0.06, Math.abs(x));
                 const front = smoothStep(0.45, 0.98, z);
                 const low = smoothStep(0.72, -0.38, y);
@@ -274,76 +321,95 @@
                 return out;
             }
 
-            if (code === 'TG') {
+            if (primitive === 'singleFlame') {
                 const p = ellipsoidField(x, y, z, 0, 0.72, 0.58, 0.36, 0.34, 0.34);
-                const flame = Math.sin(y * 14 + z * 8) * 0.2 * p;
-                addVec(out, x * p * 0.15 + flame, p * 2.1, -p * 0.25, p);
+                const flame = Math.sin(y * 13 + z * 9) * Math.pow(p, 1.2) * 0.24;
+                addVec(out, x * p * 0.12 + flame, p * 2.15, -p * 0.22, p);
+                return out;
             }
 
-            if (code === 'CT') {
+            if (primitive === 'brainFoldCap') {
                 const p = ellipsoidField(x, y, z, 0, 0.74, 0.35, 0.72, 0.36, 0.55);
-                const folds = Math.sin(x * 18) * Math.cos(z * 14) * 0.18 * p;
-                addVec(out, x * p * 0.5 + folds, p * 0.9, z * p * 0.2, p);
+                const folds = Math.sin(x * 18) * Math.cos(z * 15) * 0.2 * p;
+                addVec(out, x * p * 0.48 + folds, p * 0.95, z * p * 0.18, p);
+                return out;
             }
 
-            if (code === 'TT') {
-                const center = ellipsoidField(x, y, z, 0, 0.78, 0.36, 0.18, 0.34, 0.25);
-                const crown = Math.pow(center, 1.4);
-                addVec(out, x * crown * 0.35, crown * 1.7, z * crown * 0.15, crown);
+            if (primitive === 'forkedCrown') {
+                const center = Math.pow(ellipsoidField(x, y, z, 0, 0.78, 0.42, 0.18, 0.34, 0.24), 1.3);
+                addVec(out, x * center * 0.24, center * 1.65, -center * 0.08, center);
+                for (let sign of [1, -1]) {
+                    const fork = Math.pow(ellipsoidField(x, y, z, sign * 0.22, 0.68, 0.38, 0.18, 0.28, 0.24), 1.55);
+                    addVec(out, sign * fork * 0.55, fork * 1.35, -fork * 0.06, fork);
+                }
+                return out;
+            }
+
+            if (primitive === 'spiralPetalCrown') {
+                const p = ellipsoidField(x, y, z, 0, 0.72, 0.5, 0.62, 0.34, 0.5);
+                const angle = Math.atan2(x, z - 0.5);
+                const petal = Math.max(0, Math.sin(angle * 5 + p * 3.4));
+                const bloom = Math.pow(p, 1.2) * (0.55 + petal * 0.55);
+                addVec(out, Math.sin(angle) * bloom * 0.55, bloom * 1.05, Math.cos(angle) * bloom * 0.4 - bloom * 0.1, bloom);
+                return out;
             }
 
             for (let sign of [1, -1]) {
                 let p = 0;
                 let lx = 0, ly = 0, lz = 0;
 
-                if (code === 'AA') {
-                    const cx = sign * 0.46, cy = 0.46, cz = 0.5;
-                    p = ellipsoidField(x, y, z, cx, cy, cz, 0.52, 0.36, 0.34);
+                if (primitive === 'roundDiscPair') {
+                    const cx = sign * 0.54, cy = 0.42, cz = 0.54;
+                    p = ellipsoidField(x, y, z, cx, cy, cz, 0.48, 0.4, 0.28);
                     lx = x - cx; ly = y - cy; lz = z - cz;
-                    const disk = Math.pow(p, 0.72);
-                    addVec(out, sign * disk * 1.35 + lx * p * 0.45, ly * p * 0.45 + disk * 0.04, -lz * p * 1.1 - p * 0.08, p);
-                } else if (code === 'CC') {
-                    const cx = sign * 0.36, cy = 0.57, cz = 0.58;
-                    p = ellipsoidField(x, y, z, cx, cy, cz, 0.36, 0.3, 0.28);
+                    const disk = Math.pow(p, 0.48);
+                    const rimRound = 0.65 + 0.35 * smoothStep(0.44, 0.04, Math.hypot(lx, ly));
+                    addVec(out, sign * disk * 0.98 + lx * p * 0.18, ly * p * 0.44 + disk * 0.16, -lz * p * 1.02 - p * 0.06, p * rimRound);
+                } else if (primitive === 'triEarPair') {
+                    const cx = sign * 0.34, cy = 0.56, cz = 0.58;
+                    p = ellipsoidField(x, y, z, cx, cy, cz, 0.34, 0.31, 0.26);
                     lx = x - cx; lz = z - cz;
-                    const base = Math.pow(p, 0.6);
-                    const point = Math.pow(p, 1.6);
-                    addVec(out, sign * (0.72 * base + 0.12 * point - Math.abs(lx) * p * 0.06), base * 0.46 + point * 0.34, -lz * p * 1.0 - p * 0.1, p);
-                } else if (code === 'AC') {
-                    const cx = sign * 0.27, cy = 0.62, cz = 0.52;
-                    p = ellipsoidField(x, y, z, cx, cy, cz, 0.34, 0.46, 0.26);
-                    lx = x - cx; lz = z - cz;
-                    const lobe = Math.pow(p, 0.58);
-                    const roundTip = Math.pow(p, 2.6);
-                    const lean = smoothStep(0.35, 1.0, y) * p;
-                    addVec(out, sign * (lobe * 0.32 + lean * 0.18) + lx * p * 0.28, lobe * 1.18 + roundTip * 0.04, -lobe * 0.24 - lz * p * 0.36, p);
-                } else if (code === 'AG' || code === 'CG') {
+                    const base = Math.pow(p, 0.58);
+                    const point = Math.pow(p, 1.85);
+                    const innerPinch = smoothStep(0.18, 0.0, Math.abs(lx)) * p * 0.12;
+                    addVec(out, sign * (0.72 * base + 0.16 * point), base * 0.5 + point * 0.45, -lz * p * 0.9 - p * 0.08 - innerPinch, p);
+                } else if (primitive === 'uprightOvalEarPair') {
+                    const cx = sign * 0.28, cy = 0.61, cz = 0.52;
+                    p = ellipsoidField(x, y, z, cx, cy, cz, 0.28, 0.5, 0.24);
+                    lx = x - cx; ly = y - cy; lz = z - cz;
+                    const shaft = Math.pow(p, 0.62);
+                    const tipBulb = Math.pow(p, 3.2);
+                    const lean = smoothStep(0.28, 0.95, y) * p;
+                    addVec(out, sign * (shaft * 0.28 + lean * 0.26 + lx * p * 0.22), shaft * 1.52 + tipBulb * 0.18, -shaft * 0.18 - lz * p * 0.28, p);
+                } else if (primitive === 'shortDevilHornPair' || primitive === 'crystalHornPair') {
                     p = ellipsoidField(x, y, z, sign * 0.28, 0.58, 0.65, 0.24, 0.28, 0.24);
-                    const sharp = Math.pow(p, code === 'CG' ? 2.6 : 1.8);
-                    addVec(out, sign * sharp * 0.35, sharp * 2.0, sharp * 0.28, p);
-                } else if (code === 'TC') {
+                    const sharp = Math.pow(p, primitive === 'crystalHornPair' ? 2.7 : 1.8);
+                    addVec(out, sign * sharp * (primitive === 'crystalHornPair' ? 0.42 : 0.32), sharp * (primitive === 'crystalHornPair' ? 2.05 : 1.62), sharp * 0.24, p);
+                } else if (primitive === 'antennaBulbPair') {
                     p = ellipsoidField(x, y, z, sign * 0.2, 0.62, 0.58, 0.17, 0.32, 0.17);
                     const stalk = Math.pow(p, 1.25);
                     const bulb = Math.pow(p, 6.0);
                     addVec(out, sign * (stalk * 0.12 + bulb * 0.75), stalk * 2.25 + bulb * 0.55, stalk * 0.08 + bulb * 0.25, p);
-                } else if (code === 'CA') {
+                } else if (primitive === 'droopingWhiskerPair') {
                     p = ellipsoidField(x, y, z, sign * 0.44, 0.18, 0.78, 0.22, 0.22, 0.24);
-                    addVec(out, sign * p * 2.2, -p * 1.25, p * 0.25, p);
-                } else if (code === 'GA') {
-                    p = ellipsoidField(x, y, z, sign * 0.42, 0.5, 0.48, 0.34, 0.36, 0.26);
+                    const strand = Math.pow(p, 0.9);
+                    addVec(out, sign * strand * 2.25, -strand * 1.25, strand * 0.22, p);
+                } else if (primitive === 'houndEarPair') {
+                    p = ellipsoidField(x, y, z, sign * 0.42, 0.47, 0.48, 0.36, 0.38, 0.28);
                     lz = z - 0.48;
-                    addVec(out, sign * p * 0.8, -p * 1.35, -lz * p * 0.75 - p * 0.1, p);
-                } else if (code === 'GG') {
+                    const flap = Math.pow(p, 0.58);
+                    addVec(out, sign * flap * 0.86, -flap * 1.42, -lz * p * 0.82 - flap * 0.08, p);
+                } else if (primitive === 'hammerheadBar') {
                     p = ellipsoidField(x, y, z, sign * 0.48, 0.5, 0.67, 0.32, 0.25, 0.24);
-                    addVec(out, sign * p * 2.15, p * 0.15, -p * 0.1, p);
-                } else if (code === 'GT') {
+                    addVec(out, sign * p * 2.15, p * 0.06, -p * 0.08, p);
+                } else if (primitive === 'mothAntennaFan') {
                     p = ellipsoidField(x, y, z, sign * 0.3, 0.62, 0.58, 0.33, 0.34, 0.25);
                     const feather = Math.sin(Math.atan2(y - 0.62, x - sign * 0.3) * 8) * p * 0.2;
-                    addVec(out, sign * p * 1.35 + sign * feather, p * 1.2, -p * 0.35, p);
-                } else if (code === 'AT') {
+                    addVec(out, sign * p * 1.3 + sign * feather, p * 1.15, -p * 0.36, p);
+                } else if (primitive === 'sideGillFrill') {
                     p = ellipsoidField(x, y, z, sign * 0.44, 0.38, 0.45, 0.35, 0.2, 0.25);
-                    const frill = Math.sin((y + z) * 18) * p * 0.22;
-                    addVec(out, sign * p * 1.65, p * 0.15 + frill, -p * 0.35, p);
+                    const frill = Math.abs(Math.sin((y + z) * 20)) * p * 0.24;
+                    addVec(out, sign * p * 1.55, p * 0.12 + frill, -p * 0.42, p);
                 } else {
                     const tf = applyTensorField(x, y, z, params, sign);
                     addVec(out, tf.dx, tf.dy, tf.dz, tf.disp);
@@ -355,40 +421,73 @@
 
         function applySideBlueprint(x, y, z, code, params, headCode) {
             const out = { dx: 0, dy: 0, dz: 0, disp: 0 };
-            if (code === 'AA') return out;
+            const primitive = SIDE_PRIMITIVES[code] || 'tensorFallback';
+            if (primitive === 'none') return out;
 
             for (let sign of [1, -1]) {
-                const cx = sign * params.ox;
+                const clear = frontClearance(z, headCode);
+                const cx = sign * (params.ox || 0.82);
                 let p = ellipsoidField(x, y, z, cx, params.oy, params.oz, Math.max(0.25, params.rad), 0.55, 0.58);
-                if (code === 'GG' || code === 'TC' || code === 'AT' || code === 'CC') p *= frontClearance(z, headCode);
+                if (primitive === 'gliderWing' || primitive === 'batMembrane' || primitive === 'butterflyDoubleLobe' || primitive === 'wideRibbonBand') p *= clear;
                 if (p <= 0) continue;
                 const ease = Math.pow(p, params.pow);
                 const localZ = z - params.oz;
                 const localY = y - params.oy;
+                const localX = x - cx;
 
-                if (code === 'AT') {
+                if (primitive === 'batMembrane') {
                     const rib = Math.abs(Math.sin((localZ + 1) * 11)) * Math.pow(ease, 2.0);
                     addVec(out, sign * (ease * 2.35 - rib * 0.55), -Math.abs(localY) * ease * 0.85 - rib * 0.25, localZ * ease * 0.25, p);
-                } else if (code === 'CC') {
-                    addVec(out, sign * ease * 2.05, ease * 1.05 + localY * ease * 0.75, -localZ * ease * 0.65, p);
-                } else if (code === 'AC') {
+                } else if (primitive === 'leafBlade') {
                     const leaf = Math.sin(ease * Math.PI);
-                    addVec(out, sign * ease * 2.25, -ease * 0.25, localZ * leaf * 1.7 - ease * 0.2, p);
-                } else if (code === 'TA') {
-                    const feathers = Math.abs(Math.sin(localZ * 12)) * Math.pow(ease, 1.6);
-                    addVec(out, sign * ease * 2.0, ease * 0.75 - feathers * 0.2, -ease * 0.15 + feathers * 0.2, p);
-                } else if (code === 'TC' || code === 'GG') {
-                    const widthScale = code === 'GG' ? 0.78 : 0.92;
-                    addVec(out, sign * ease * params.sx * widthScale, -ease * 0.6, localZ * ease * 0.2 - ease * 0.08, p);
-                } else if (code === 'CG') {
+                    const vein = smoothStep(0.08, 0.0, Math.abs(localZ)) * ease;
+                    addVec(out, sign * ease * 2.1, -ease * 0.18 + vein * 0.18, localZ * leaf * 1.9 - ease * 0.14, p);
+                } else if (primitive === 'enginePod') {
+                    const nozzle = Math.pow(ease, 2.2);
+                    addVec(out, sign * ease * 1.45, -ease * 0.04, localZ * ease * 0.7 + nozzle * 0.2, p);
+                } else if (primitive === 'angelFeatherFan') {
+                    const feather = Math.abs(Math.sin((localZ + 0.2) * 13)) * Math.pow(ease, 1.5);
+                    addVec(out, sign * ease * 1.85, ease * 0.82 - feather * 0.16, -ease * 0.2 + feather * 0.36, p);
+                } else if (primitive === 'lowFlipper') {
+                    const paddle = Math.sin(ease * Math.PI);
+                    addVec(out, sign * ease * 1.9, -ease * 0.78 - Math.abs(localY) * ease * 0.18, localZ * paddle * 1.05 + ease * 0.1, p);
+                } else if (primitive === 'gliderWing') {
+                    const thin = smoothStep(0.55, 0.0, Math.abs(localY));
+                    addVec(out, sign * ease * 2.65, -ease * 0.5 * thin, localZ * ease * 0.16 - ease * 0.04, p);
+                } else if (primitive === 'ruffleSkirt') {
+                    const skirt = ellipsoidField(x, y, z, sign * 0.82, -0.25, -0.03, 0.72, 0.24, 0.76) * clear;
+                    const wave = Math.sin((z + sign * x) * 16) * skirt * 0.16;
+                    addVec(out, sign * skirt * 1.35, -skirt * 0.42 + wave, localZ * skirt * 0.2, skirt);
+                } else if (primitive === 'sideBoneSpike') {
+                    const spike = Math.pow(ease, 2.4);
+                    addVec(out, sign * spike * 2.35, -spike * 0.05, localZ * spike * 0.12, p);
+                } else if (primitive === 'bubblePod') {
+                    const bubble = Math.pow(ease, 0.82);
+                    addVec(out, sign * bubble * 1.05, bubble * 0.88, bubble * 0.38 + localZ * bubble * 0.26, p);
+                } else if (primitive === 'butterflyDoubleLobe') {
+                    const upper = ellipsoidField(x, y, z, sign * 0.82, 0.28, -0.1, 0.62, 0.48, 0.48) * clear;
+                    const lower = ellipsoidField(x, y, z, sign * 0.82, -0.08, 0.15, 0.62, 0.32, 0.44) * clear;
+                    const wing = Math.max(upper, lower);
+                    addVec(out, sign * wing * 2.0, upper * 1.12 - lower * 0.35, -localZ * wing * 0.52, wing);
+                } else if (primitive === 'spiralSideHorn') {
                     const twistAngle = ease * params.twist;
-                    const localX = x - cx;
                     const rotX = Math.cos(twistAngle) * localX - Math.sin(twistAngle) * localZ;
                     const rotZ = Math.sin(twistAngle) * localX + Math.cos(twistAngle) * localZ;
                     addVec(out, sign * (ease * 1.8 + rotX - localX), ease * 0.1, rotZ - localZ, p);
-                } else if (code === 'GA') {
-                    const gills = Math.abs(Math.sin(localZ * 16)) * ease;
-                    addVec(out, sign * ease * 1.35, gills * 0.55, -gills * 0.35, p);
+                } else if (primitive === 'gillComb') {
+                    const gills = Math.abs(Math.sin((localZ + 0.1) * 18)) * ease;
+                    addVec(out, sign * ease * 1.15, gills * 0.7 - ease * 0.08, -gills * 0.42, p);
+                } else if (primitive === 'cloudFloatSac') {
+                    const puff = Math.max(
+                        ellipsoidField(x, y, z, sign * 0.86, 0.12, -0.24, 0.4, 0.32, 0.34),
+                        ellipsoidField(x, y, z, sign * 0.9, 0.02, 0.18, 0.38, 0.3, 0.32)
+                    ) * clear;
+                    addVec(out, sign * puff * 1.4, puff * 0.8, localZ * puff * 0.72, puff);
+                } else if (primitive === 'foldedPanelWing') {
+                    const hinge = Math.max(0, Math.sin((Math.abs(localZ) + 0.15) * 7)) * ease;
+                    addVec(out, sign * ease * 1.85, -ease * 0.45 + hinge * 0.12, -Math.abs(localZ) * ease * 0.8, p);
+                } else if (primitive === 'wideRibbonBand') {
+                    addVec(out, sign * ease * 2.2, -ease * 0.26, localZ * ease * 0.5, p);
                 } else {
                     addVec(out, sign * ease * params.sx, ease * params.sy, localZ * Math.sin(ease * Math.PI) * params.sz, p);
                     if (params.web !== 0) {
@@ -405,69 +504,79 @@
             const out = { dx: 0, dy: 0, dz: 0, disp: 0 };
             if (baseY <= 0 || code === 'AA') return out;
 
+            const primitive = DORSAL_PRIMITIVES[code] || params.type;
             const headClear = frontClearance(z, headCode);
             const dC = Math.hypot(x, y - 0.5, z + 0.3);
             const pC = smoothStep(0.8, 0.0, dC) * (needsHeadClearance(headCode) ? headClear : 1);
             const center = smoothStep(0.38, 0.0, Math.abs(x));
             const spineBand = smoothStep(-0.85, -0.05, z) * smoothStep(0.55, -0.12, z) * (needsHeadClearance(headCode) ? headClear : 1);
 
-            if (params.type === 'garlic' && pC > 0) {
+            if (primitive === 'bulbCluster' && pC > 0) {
                 const grooves = 1.0 + 0.15 * Math.sin(Math.abs(Math.atan2(x, z + 0.3)) * 6);
                 const ease = Math.pow(pC, 1.5) * grooves;
-                addVec(out, nx * ease * 1.5, ny * ease * 1.5, nz * ease * 1.5, pC);
-            } else if (params.type === 'volcano' && pC > 0) {
+                const cap = smoothStep(-0.75, 0.15, z);
+                addVec(out, nx * ease * 1.25, ny * ease * 1.25 + ease * 0.35, nz * ease * 1.0 * cap, pC);
+            } else if (primitive === 'craterMound' && pC > 0) {
                 const ease = Math.pow(pC, 1.2);
                 const crater = Math.sin(pC * Math.PI) * 0.8;
-                addVec(out, nx * ease * 0.25, ease * 1.45 - crater * pC * 2.0, nz * ease * 0.25, pC);
-            } else if (params.type === 'coral') {
+                addVec(out, nx * ease * 0.35, ease * 1.65 - crater * pC * 2.15, nz * ease * 0.35, pC);
+            } else if (primitive === 'branchingCoral') {
                 const dS = Math.abs(x);
                 if (dS < 0.6 && z > -0.8 && z < 0.5) {
                     const p = smoothStep(0.6, 0.0, dS) * smoothStep(-0.8, -0.1, z) * smoothStep(0.5, -0.1, z);
-                    const branches = Math.max(0, Math.sin(Math.abs(x) * 15) * Math.cos(z * 15) + Math.sin(y * 20) * 0.5);
-                    const ease = p * (1.0 + branches * 1.2);
-                    addVec(out, nx * ease * 0.4, ease * 1.2, nz * ease * 0.4, p);
+                    const branches = Math.max(0, Math.sin(Math.abs(x) * 18) * Math.cos(z * 16) + Math.sin(y * 22) * 0.55);
+                    const ease = p * (0.7 + branches * 1.6);
+                    addVec(out, nx * ease * 0.45, ease * 1.45, nz * ease * 0.45, p);
                 }
-            } else if (params.type === 'dorsal_fin') {
+            } else if (primitive === 'sineDorsalFin') {
                 const p = smoothStep(0.22, 0.0, Math.abs(x)) * spineBand;
-                const finWave = Math.pow(Math.abs(Math.sin(z * 6.0)), 1.25);
-                addVec(out, 0, p * finWave * 1.8, 0, p * finWave);
-            } else if (params.type === 'plates' || params.type === 'stegosaurus') {
-                const plateRhythm = Math.pow(Math.max(0, Math.sin((z + 0.9) * Math.PI * 4.0)), 1.1);
+                const finWave = 0.55 + 0.45 * Math.pow(Math.abs(Math.sin(z * 6.0)), 1.15);
+                addVec(out, 0, p * finWave * 1.95, -p * 0.05, p * finWave);
+            } else if (primitive === 'sharpPlateRow' || primitive === 'stegosaurusPlates') {
+                const rhythm = primitive === 'stegosaurusPlates' ? 3.2 : 4.3;
+                const plateRhythm = Math.pow(Math.max(0, Math.sin((z + 0.92) * Math.PI * rhythm)), 1.08);
                 const p = center * spineBand * plateRhythm;
-                addVec(out, nx * p * 0.25, p * (params.type === 'stegosaurus' ? 1.8 : 1.35), nz * p * 0.2, p);
-            } else if (params.type === 'mushroom') {
+                addVec(out, nx * p * 0.22, p * (primitive === 'stegosaurusPlates' ? 2.05 : 1.52), nz * p * 0.16, p);
+            } else if (primitive === 'mushroomCap') {
                 const p = pC * smoothStep(0.05, 0.75, y);
-                addVec(out, x * p * 0.9, p * 0.85, (z + 0.25) * p * 0.75, p);
-            } else if (params.type === 'crystals') {
+                const brim = smoothStep(0.15, 0.75, Math.abs(x)) * p * 0.35;
+                addVec(out, x * p * 1.0, p * 0.95 - brim * 0.2, (z + 0.25) * p * 0.78, p);
+            } else if (primitive === 'crystalVein') {
                 let b = Math.max(0, Math.cos(x * Math.PI * 4) * Math.sin(zNorm * Math.PI * 3.5) - 0.2);
-                b = Math.pow(b, 3.0);
-                addVec(out, nx * b * 0.9, b * 1.8, nz * b * 0.9, b);
-            } else if (params.type === 'fluff') {
+                b = Math.pow(b, 2.7) * spineBand;
+                addVec(out, nx * b * 0.9, b * 1.95, nz * b * 0.9, b);
+            } else if (primitive === 'fluffPuffs') {
                 let b = Math.max(0, Math.sin(x * 16) * Math.sin(y * 12) * Math.cos(z * 12));
-                b = Math.pow(b, 0.7) * pC;
-                addVec(out, nx * b * 0.45, ny * b * 0.45 + b * 0.25, nz * b * 0.45, b);
-            } else if (params.type === 'shell') {
-                const p = pC * smoothStep(-0.65, 0.25, z);
+                b = Math.pow(b, 0.66) * pC;
+                addVec(out, nx * b * 0.55, ny * b * 0.48 + b * 0.38, nz * b * 0.55, b);
+            } else if (primitive === 'shellCap') {
+                const p = pC * smoothStep(-0.72, 0.18, z);
+                const edge = smoothStep(0.58, 0.78, Math.abs(x)) * p;
                 const grooves = 1.0 + Math.abs(Math.sin(x * 10)) * 0.15;
-                addVec(out, nx * p * 0.8 * grooves, p * 0.75, nz * p * 0.5 * grooves, p);
-            } else if (params.type === 'single_horn') {
+                addVec(out, nx * p * 1.1 * grooves, p * 0.8 + edge * 0.18, nz * p * 0.58 * grooves, p);
+            } else if (primitive === 'singleBackHorn') {
                 const p = ellipsoidField(x, y, z, 0, 0.7, -0.05, 0.22, 0.32, 0.35);
                 const sharp = Math.pow(p, 2.3);
-                addVec(out, 0, sharp * 2.0, -sharp * 0.45, p);
-            } else if (params.type === 'dual_spikes') {
+                addVec(out, 0, sharp * 2.2, -sharp * 0.48, p);
+            } else if (primitive === 'dualSpikeRows') {
                 const row = Math.max(
                     ellipsoidField(x, y, z, 0.28, 0.55, -0.1, 0.16, 0.28, 0.62),
                     ellipsoidField(x, y, z, -0.28, 0.55, -0.1, 0.16, 0.28, 0.62)
                 );
                 const p = row * spineBand;
-                addVec(out, nx * p * 0.3, p * 1.4, nz * p * 0.25, p);
-            } else if (params.type === 'ridge') {
+                const tooth = 0.55 + 0.45 * Math.abs(Math.sin(z * 9));
+                addVec(out, nx * p * 0.35, p * tooth * 1.65, nz * p * 0.28, p * tooth);
+            } else if (primitive === 'softRidgeCrest') {
                 const p = center * spineBand * (0.45 + 0.55 * Math.abs(Math.sin(z * 7)));
-                addVec(out, 0, p * 1.2, Math.sin(z * 8) * p * 0.18, p);
-            } else if (params.type === 'bubbles') {
-                let b = Math.max(0, Math.cos(x * Math.PI * 4) * Math.sin(zNorm * Math.PI * 4) - 0.1);
-                b = Math.pow(b, 0.8);
-                addVec(out, nx * b * 0.5, ny * b * 0.5, nz * b * 0.5, b);
+                addVec(out, 0, p * 1.35, Math.sin(z * 8) * p * 0.22, p);
+            } else if (primitive === 'bubbleCluster') {
+                let b = Math.max(0, Math.cos(x * Math.PI * 4) * Math.sin(zNorm * Math.PI * 4) - 0.08);
+                b = Math.pow(b, 0.74) * (0.55 + 0.45 * pC);
+                addVec(out, nx * b * 0.58, ny * b * 0.56 + b * 0.18, nz * b * 0.58, b);
+            } else if (primitive === 'fatSpikeGrid') {
+                let b = Math.max(0, Math.cos(x * Math.PI * 2.6) * Math.sin(zNorm * Math.PI * 3.2) - 0.18);
+                b = Math.pow(b, 1.45) * spineBand;
+                addVec(out, nx * b * 1.0, ny * b * 0.8 + b * 0.55, nz * b * 1.0, b);
             } else {
                 let b = Math.max(0, Math.cos(x * Math.PI * 2.5) * Math.sin(zNorm * Math.PI * 3.0) - 0.2);
                 b = Math.pow(b, 1.5);
@@ -478,7 +587,6 @@
         }
 
         function addFeatureMarkers(group, cHd, cSd, accentColor) {
-            const innerMat = new THREE.MeshStandardMaterial({ color: accentColor, roughness: 0.8, metalness: 0, side: THREE.DoubleSide, wireframe: isWireframeMode });
             const darkMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.5, metalness: 0, wireframe: isWireframeMode });
 
             if (cHd === 'GC') {
@@ -491,15 +599,7 @@
                 }
             }
 
-            if (cSd === 'CC') {
-                const spotGeo = new THREE.CircleGeometry(0.08, 14);
-                for (let sign of [1, -1]) {
-                    const spot = new THREE.Mesh(spotGeo, innerMat);
-                    spot.position.set(sign * 2.15, 0.72, 0.08);
-                    spot.rotation.y = sign * -0.9;
-                    group.add(spot);
-                }
-            }
+            // Keep small meshes limited to functional recognition points. Wing/ear interiors are sculpted into the main manifold.
         }
 
         // --- 万向张量核心方程 ---
@@ -601,7 +701,7 @@
             const cSd = currentDNA[3].join(''); const sideParams = SIDE_TENSORS[cSd];
             const cBk = currentDNA[4].join(''); const backParams = BACK_TENSORS[cBk];
             const patId = PATTERNS[BASES.indexOf(currentDNA[5][0])*4 + BASES.indexOf(currentDNA[5][1])];
-            const rand = seededRandom(hashString(`tensor-lab-v27:${dnaSignature()}`));
+            const rand = seededRandom(hashString(`tensor-lab-v29:${dnaSignature()}`));
 
             const baseColor = new THREE.Color(pal.b[Math.floor(rand() * pal.b.length)]);
             const accentColor = new THREE.Color(pal.a[Math.floor(rand() * pal.a.length)]);
@@ -674,17 +774,20 @@
                 let g = THREE.MathUtils.lerp(baseColor.g, accentColor.g, cMix);
                 let b = THREE.MathUtils.lerp(baseColor.b, accentColor.b, cMix);
                 
-                if (patId === 'polka_dots') {
+                const patternStrength = smoothStep(0.72, 0.25, disp);
+                if (patId === 'polka_dots' && patternStrength > 0.45) {
                     if (Math.sin(x*5) * Math.cos(z*5) > 0.6) { r=accentColor.r; g=accentColor.g; b=accentColor.b; }
-                } else if (patId === 'stripes') {
+                } else if (patId === 'stripes' && patternStrength > 0.45) {
                     if (Math.sin(x*8 + z*8) > 0.5) { r=accentColor.r; g=accentColor.g; b=accentColor.b; }
-                } else if (patId === 'voronoi') {
+                } else if (patId === 'voronoi' && patternStrength > 0.45) {
                     if (Math.sin(x*10) * Math.sin(y*10) * Math.sin(z*10) > 0.2) { r=accentColor.r; g=accentColor.g; b=accentColor.b; }
-                } else if (patId === 'zebra') {
+                } else if (patId === 'zebra' && patternStrength > 0.45) {
                     if (Math.sin(x*15 + Math.sin(z*5)*5) > 0.5) { r=accentColor.r; g=accentColor.g; b=accentColor.b; }
                 } else if (patId === 'gradient') {
                     let grad = smoothStep(-1.0, 1.0, z);
-                    r = THREE.MathUtils.lerp(r, accentColor.r, grad); g = THREE.MathUtils.lerp(g, accentColor.g, grad); b = THREE.MathUtils.lerp(b, accentColor.b, grad);
+                    r = THREE.MathUtils.lerp(r, accentColor.r, grad * patternStrength);
+                    g = THREE.MathUtils.lerp(g, accentColor.g, grad * patternStrength);
+                    b = THREE.MathUtils.lerp(b, accentColor.b, grad * patternStrength);
                 }
                 
                 let dB = Math.min(Math.hypot(x-blushOrigin.x, y-blushOrigin.y, z-blushOrigin.z), Math.hypot(x+blushOrigin.x, y-blushOrigin.y, z-blushOrigin.z));
@@ -756,15 +859,9 @@
             const board = document.getElementById('dna-board'); board.innerHTML = '';
             currentDNA.forEach((gene, idx) => {
                 const block = document.createElement('div'); block.className = 'gene-block';
-                
-                let traitName = "";
                 const code = gene.join('');
-                if(idx===0) traitName = PALETTES[code].name;
-                if(idx===1) traitName = BODY_SHAPES[code].n;
-                if(idx===2) traitName = HEAD_TENSORS[code].n;
-                if(idx===3) traitName = SIDE_TENSORS[code].n;
-                if(idx===4) traitName = BACK_TENSORS[code].n;
-                if(idx===5) traitName = PATTERNS[BASES.indexOf(gene[0])*4+BASES.indexOf(gene[1])];
+                const traitName = getTraitName(idx, code);
+                if (idx === 2) block.title = `视觉合同: ${getHeadContract(code).firstRead}`;
 
                 block.innerHTML = `
                     <div class="gene-label">${GENE_NAMES[idx]}</div>
@@ -779,8 +876,65 @@
                 board.appendChild(block);
             });
         }
+
+        function getTraitName(idx, code) {
+            if(idx===0) return PALETTES[code].name;
+            if(idx===1) return BODY_SHAPES[code].n;
+            if(idx===2) return HEAD_TENSORS[code].n;
+            if(idx===3) return SIDE_TENSORS[code].n;
+            if(idx===4) return BACK_TENSORS[code].n;
+            if(idx===5) return PATTERNS[BASES.indexOf(code[0])*4+BASES.indexOf(code[1])];
+            return code;
+        }
+
+        function normalizeDNACodes(codes) {
+            if (!Array.isArray(codes) || codes.length !== currentDNA.length) throw new Error('DNA must contain 6 two-base codes.');
+            return codes.map(code => {
+                if (!DNA_CODES.includes(code)) throw new Error(`Invalid DNA code: ${code}`);
+                return [code[0], code[1]];
+            });
+        }
+
+        function setDNAFromCodes(codes, options = {}) {
+            currentDNA = normalizeDNACodes(codes);
+            renderUI();
+            if (options.immediate === false) triggerMutation();
+            else buildCreature();
+        }
+
+        function setCameraView(view) {
+            const target = new THREE.Vector3(0, 0.35, 0.2);
+            const views = {
+                front: new THREE.Vector3(0, 3.0, 8.2),
+                side: new THREE.Vector3(8.2, 3.0, 0.15),
+                top: new THREE.Vector3(0.01, 8.8, 0.2),
+                iso: new THREE.Vector3(7.5, 5.5, 8.5)
+            };
+            camera.position.copy(views[view] || views.iso);
+            controls.target.copy(target);
+            camera.lookAt(target);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.TensorLab = {
+            setDNA: (codes) => setDNAFromCodes(codes),
+            setCameraView,
+            getState: () => ({
+                dna: dnaSignature(),
+                traits: currentDNA.map((gene, idx) => getTraitName(idx, gene.join(''))),
+                polyCount: document.getElementById('poly-count').innerText
+            }),
+            codes: { dna: DNA_CODES, head: Object.keys(HEAD_TENSORS), side: Object.keys(SIDE_TENSORS), dorsal: Object.keys(BACK_TENSORS) },
+            contracts: { head: HEAD_CONTRACTS },
+            primitives: { head: HEAD_PRIMITIVES, side: SIDE_PRIMITIVES, dorsal: DORSAL_PRIMITIVES }
+        };
+
         function triggerMutation() { document.getElementById('loading').style.opacity = 1; setTimeout(() => { buildCreature(); document.getElementById('loading').style.opacity = 0; }, 50); }
-        document.getElementById('btn-randomize').addEventListener('click', () => { currentDNA = currentDNA.map(() => [BASES[Math.floor(Math.random()*4)], BASES[Math.floor(Math.random()*4)]]); renderUI(); triggerMutation(); });
+        document.getElementById('btn-randomize').addEventListener('click', () => {
+            const randomCodes = currentDNA.map(() => BASES[Math.floor(Math.random()*4)] + BASES[Math.floor(Math.random()*4)]);
+            setDNAFromCodes(randomCodes, { immediate: false });
+        });
 
         renderUI(); triggerMutation();
         const clock = new THREE.Clock();

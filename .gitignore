@@ -2,6 +2,7 @@
 run-check-*.png
 run-check-*.zip
 shape-check-*.png
+qa-atlas/
 *.log
 node_modules/
 .env
