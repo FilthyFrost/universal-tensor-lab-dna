@@ -1091,6 +1091,9 @@
                 pos = geo.attributes.position;
             }
 
+            // Catfish barbels append vertices to the shared BufferGeometry. The original
+            // SphereGeometry normal attribute is now too short, so recreate it before drawing.
+            geo.deleteAttribute('normal');
             geo.computeVertexNormals();
             const toyMesh = new THREE.Mesh(geo, vinylMat); toyMesh.castShadow = true; floatWrapper.add(toyMesh);
 
