@@ -136,7 +136,7 @@
             'TT': { n: '多叉皇冠', ox: 0.25, oy: 0.7, oz: 0.4, rad: 0.4, pow: 1.5, sx: 0.8, sy: 1.5, sz: 0.8, cav: 0, tw: 0, wv: 10.0, dr: 0, blb: 0 },
             'TC': { n: '外星人触角', ox: 0.25, oy: 0.6, oz: 0.6, rad: 0.18, pow: 1.8, sx: 0.2, sy: 2.5, sz: 0.2, cav: 0, tw: 0, wv: 0, dr: 0.2, blb: 1.2 }, 
             'TG': { n: '摇曳火苗', ox: 0.3, oy: 0.6, oz: 0.6, rad: 0.35, pow: 2.5, sx: 0.2, sy: 2.2, sz: 0, cav: 0, tw: 0, wv: 15.0, dr: 0, blb: 0 },
-            'CA': { n: '长垂胡须', ox: 0.45, oy: 0.2, oz: 0.8, rad: 0.2, pow: 1.5, sx: 2.5, sy: 0.2, sz: 0.2, cav: 0, tw: 0, wv: 0, dr: 1.5, blb: 0 },
+            'CA': { n: '鲶鱼须髯', ox: 0.45, oy: 0.2, oz: 0.8, rad: 0.2, pow: 1.5, sx: 2.5, sy: 0.2, sz: 0.2, cav: 0, tw: 0, wv: 0, dr: 1.5, blb: 0 },
             'CT': { n: '大脑沟壑', ox: 0.3, oy: 0.7, oz: 0.5, rad: 0.4, pow: 1.2, sx: 1.0, sy: 1.0, sz: 1.0, cav: 0, tw: 0, wv: 18.0, dr: 0, blb: 0 },
             'CC': { n: '厚实猫耳', ox: 0.35, oy: 0.6, oz: 0.6, rad: 0.3, pow: 1.2, sx: 1.0, sy: 1.0, sz: -0.2, cav: 0.3, tw: 0, wv: 0, dr: 0, blb: 0 },
             'CG': { n: '水晶锐角', ox: 0.25, oy: 0.6, oz: 0.6, rad: 0.25, pow: 3.5, sx: 0.5, sy: 2.0, sz: 0.5, cav: 0, tw: 0, wv: 0, dr: 0, blb: 0 }, 
@@ -155,7 +155,7 @@
             'TT': { firstRead: '多叉皇冠尖端', protectedZone: 'front-medium', patternPolicy: 'protect-organ', markerPolicy: 'none' },
             'TC': { firstRead: '双外星触角加端部球感', protectedZone: 'front-medium', patternPolicy: 'protect-organ', markerPolicy: 'none' },
             'TG': { firstRead: '中线摇曳火苗', protectedZone: 'front-wide', patternPolicy: 'protect-organ', markerPolicy: 'none' },
-            'CA': { firstRead: '两侧长垂胡须', protectedZone: 'front-wide', patternPolicy: 'protect-organ', markerPolicy: 'none' },
+            'CA': { firstRead: '口角多根鲶鱼须，短弧下垂', protectedZone: 'front-wide', patternPolicy: 'protect-organ', markerPolicy: 'none' },
             'CT': { firstRead: '头顶脑沟团块', protectedZone: 'front-medium', patternPolicy: 'protect-organ', markerPolicy: 'none' },
             'CC': { firstRead: '短三角猫耳，向外张开', protectedZone: 'front-wide', patternPolicy: 'protect-organ', markerPolicy: 'no-floating-ear-marker' },
             'CG': { firstRead: '双水晶锐角', protectedZone: 'front-medium', patternPolicy: 'protect-organ', markerPolicy: 'none' },
@@ -168,7 +168,7 @@
         const HEAD_PRIMITIVES = {
             'AA': 'roundDiscPair', 'AT': 'sideGillFrill', 'AC': 'uprightOvalEarPair', 'AG': 'shortDevilHornPair',
             'TA': 'spiralPetalCrown', 'TT': 'forkedCrown', 'TC': 'antennaBulbPair', 'TG': 'singleFlame',
-            'CA': 'droopingWhiskerPair', 'CT': 'brainFoldCap', 'CC': 'triEarPair', 'CG': 'crystalHornPair',
+            'CA': 'catfishBarbelWhiskers', 'CT': 'brainFoldCap', 'CC': 'triEarPair', 'CG': 'crystalHornPair',
             'GA': 'houndEarPair', 'GT': 'mothAntennaFan', 'GC': 'sweptTubeTrunk', 'GG': 'hammerheadBar'
         };
 
@@ -178,6 +178,12 @@
             'CA': 'sideBoneSpike', 'CT': 'bubblePod', 'CC': 'butterflyDoubleLobe', 'CG': 'spiralSideHorn',
             'GA': 'gillComb', 'GT': 'cloudFloatSac', 'GC': 'foldedPanelWing', 'GG': 'wideRibbonBand'
         };
+
+        const CATFISH_BARBEL_FIELDS = [
+            { cx: 0.31, oy: 0.05, oz: 0.84, rx: 0.22, ry: 0.12, rz: 0.2, side: 0.24, down: -0.08, forward: 0.18, phase: 0.0 },
+            { cx: 0.37, oy: -0.05, oz: 0.85, rx: 0.24, ry: 0.12, rz: 0.2, side: 0.34, down: -0.14, forward: 0.2, phase: 1.6 },
+            { cx: 0.29, oy: -0.16, oz: 0.8, rx: 0.2, ry: 0.11, rz: 0.18, side: 0.2, down: -0.18, forward: 0.14, phase: 3.1 }
+        ];
 
         const DORSAL_PRIMITIVES = {
             'AA': 'smooth', 'AT': 'bulbCluster', 'AC': 'branchingCoral', 'AG': 'sharpPlateRow',
@@ -495,11 +501,18 @@
                     const stalk = Math.pow(p, 1.05);
                     const bulb = Math.pow(p, 5.5);
                     addVec(out, sign * (stalk * 0.18 + bulb * 1.05), stalk * 2.8 + bulb * 0.68, stalk * 0.04 + bulb * 0.28, p);
-                } else if (primitive === 'droopingWhiskerPair') {
-                    p = ellipsoidField(x, y, z, sign * 0.44, 0.14, 0.76, 0.24, 0.26, 0.26);
-                    const strand = Math.pow(p, 0.76);
-                    const droop = smoothStep(0.4, -0.55, y) * p;
-                    addVec(out, sign * strand * 3.0, -strand * 1.5 - droop * 0.5, strand * 0.6, p);
+                } else if (primitive === 'catfishBarbelWhiskers') {
+                    const cheekPad = ellipsoidField(x, y, z, sign * 0.28, -0.03, 0.88, 0.3, 0.2, 0.22);
+                    if (cheekPad > 0) {
+                        addVec(out, sign * cheekPad * 0.16, -cheekPad * 0.08, cheekPad * 0.18, cheekPad * 0.45);
+                    }
+                    for (const strandSpec of CATFISH_BARBEL_FIELDS) {
+                        const q = ellipsoidField(x, y, z, sign * strandSpec.cx, strandSpec.oy, strandSpec.oz, strandSpec.rx, strandSpec.ry, strandSpec.rz);
+                        if (q <= 0) continue;
+                        const root = Math.pow(q, 1.18);
+                        const rib = Math.abs(Math.sin((y - strandSpec.oy) * 34 + strandSpec.phase)) * Math.pow(q, 1.65);
+                        addVec(out, sign * root * 0.08, -root * 0.025 + rib * 0.035, root * 0.08, q * 0.55);
+                    }
                 } else if (primitive === 'houndEarPair') {
                     p = ellipsoidField(x, y, z, sign * 0.42, 0.45, 0.48, 0.42, 0.42, 0.27);
                     lz = z - 0.48;
@@ -711,7 +724,50 @@
                 }
             }
 
-            // Keep small meshes limited to functional recognition points. Wing/ear interiors are sculpted into the main manifold.
+            if (cHd === 'CA') {
+                const barbelColor = new THREE.Color(0x8a6f3a).lerp(accentColor, 0.28);
+                const barbelMat = new THREE.MeshStandardMaterial({ color: barbelColor, roughness: 0.82, metalness: 0, wireframe: isWireframeMode });
+                const makeTaperedBarbel = (points, rootRadius = 0.034, tipRadius = 0.01) => {
+                    const tubularSegments = 6;
+                    const radialSegments = 5;
+                    const curve = new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(p[0], p[1], p[2])));
+                    const geo = new THREE.TubeGeometry(curve, tubularSegments, rootRadius, radialSegments, false);
+                    const pos = geo.attributes.position;
+                    const ringSize = radialSegments + 1;
+                    for (let ring = 0; ring <= tubularSegments; ring++) {
+                        const t = ring / tubularSegments;
+                        const center = curve.getPointAt(t);
+                        const scale = THREE.MathUtils.lerp(1, tipRadius / rootRadius, Math.pow(t, 0.75));
+                        for (let j = 0; j < ringSize; j++) {
+                            const idx = ring * ringSize + j;
+                            pos.setXYZ(
+                                idx,
+                                center.x + (pos.getX(idx) - center.x) * scale,
+                                center.y + (pos.getY(idx) - center.y) * scale,
+                                center.z + (pos.getZ(idx) - center.z) * scale
+                            );
+                        }
+                    }
+                    pos.needsUpdate = true;
+                    geo.computeVertexNormals();
+                    return new THREE.Mesh(geo, barbelMat);
+                };
+
+                for (let sign of [1, -1]) {
+                    const specs = [
+                        [[sign * 0.2, 0.0, 0.98], [sign * 0.62, -0.05, 1.22], [sign * 1.1, -0.12, 1.42]],
+                        [[sign * 0.24, -0.08, 1.0], [sign * 0.58, -0.17, 1.17], [sign * 0.98, -0.24, 1.32]],
+                        [[sign * 0.16, -0.17, 0.94], [sign * 0.38, -0.24, 1.04], [sign * 0.7, -0.285, 1.14]]
+                    ];
+                    for (const points of specs) {
+                        const barbel = makeTaperedBarbel(points);
+                        barbel.castShadow = true;
+                        group.add(barbel);
+                    }
+                }
+            }
+
+            // Keep small meshes limited to functional recognition points; broad organs stay in the main manifold.
         }
 
         // --- 万向张量核心方程 ---
@@ -901,6 +957,30 @@
                     r = THREE.MathUtils.lerp(r, accentColor.r, grad * patternStrength);
                     g = THREE.MathUtils.lerp(g, accentColor.g, grad * patternStrength);
                     b = THREE.MathUtils.lerp(b, accentColor.b, grad * patternStrength);
+                }
+
+                if (cHd === 'CA') {
+                    let whiskerRoot = 0;
+                    let whiskerLine = 0;
+                    for (let sign of [1, -1]) {
+                        for (const strandSpec of CATFISH_BARBEL_FIELDS) {
+                            const q = ellipsoidField(x, y, z, sign * strandSpec.cx, strandSpec.oy, strandSpec.oz, strandSpec.rx * 1.06, strandSpec.ry * 1.08, strandSpec.rz * 1.05);
+                            if (q <= 0) continue;
+                            const rib = Math.abs(Math.sin((y - strandSpec.oy) * 34 + (z - strandSpec.oz) * 13 + strandSpec.phase)) * Math.pow(q, 1.2);
+                            whiskerRoot = Math.max(whiskerRoot, q);
+                            whiskerLine = Math.max(whiskerLine, rib);
+                        }
+                    }
+                    if (whiskerRoot > 0) {
+                        const softTint = Math.min(0.28, Math.pow(whiskerRoot, 1.25) * 0.28);
+                        const lineTint = Math.min(0.42, whiskerLine * 0.42);
+                        r = THREE.MathUtils.lerp(r, baseColor.r * 0.72 + accentColor.r * 0.28, softTint);
+                        g = THREE.MathUtils.lerp(g, baseColor.g * 0.72 + accentColor.g * 0.28, softTint);
+                        b = THREE.MathUtils.lerp(b, baseColor.b * 0.72 + accentColor.b * 0.28, softTint);
+                        r = THREE.MathUtils.lerp(r, accentColor.r, lineTint);
+                        g = THREE.MathUtils.lerp(g, accentColor.g, lineTint);
+                        b = THREE.MathUtils.lerp(b, accentColor.b, lineTint);
+                    }
                 }
                 
                 let dB = Math.min(Math.hypot(x-blushOrigin.x, y-blushOrigin.y, z-blushOrigin.z), Math.hypot(x+blushOrigin.x, y-blushOrigin.y, z-blushOrigin.z));
