@@ -12,8 +12,8 @@ import {
     scene, camera, renderer, controls, setSceneGlobals,
     currentGroup, floatWrapper, setCurrentGroup, setFloatWrapper,
     game, arenaState, setArenaState, bScene, setBScene
-} from './state.mjs';
-import { PALETTES, HEAD_PRIMITIVES, SIDE_PRIMITIVES, DORSAL_PRIMITIVES, HEAD_CONTRACTS } from './dna-constants.mjs';
+} from './core/state.mjs';
+import { PALETTES, HEAD_PRIMITIVES, SIDE_PRIMITIVES, DORSAL_PRIMITIVES, HEAD_CONTRACTS } from './data/dna-constants.mjs';
 import {
     RARITY_COLORS, RARITY_LABELS, GENE_LABELS, getExprTier, getGeneRarity,
     GENE_BASE_SCORE, COLOR_GENE_BONUS,
@@ -23,8 +23,8 @@ import {
     HEALER_COST_PER_INJURY, FAILSAFE_CLEAN_REWARD,
     SMUGGLER_VISIT_CHANCE, SMUGGLER_MIN_INTERVAL,
     RESEARCH_TREE, WAVE_TIERS, getAgeStage
-} from './game-constants.mjs';
-import { buildCreature } from './creature-builder.mjs';
+} from './data/game-constants.mjs';
+import { buildCreature } from './creature/creature-builder.mjs';
 import {
     getTraitName, normalizeDNACodes, calcCreatureValue, calcBreedCost, getHighestRarity,
     createCreature, generateWildDNA, breedCreatures, calcComboMultiplier, calcBaseValue,
@@ -35,7 +35,7 @@ import {
     cloneCreature, getCloneCost, healInjury,
     skipDay, generateSmugglerStock,
     STAT_NAMES
-} from './game-logic.mjs';
+} from './game/game-logic.mjs';
 
 // --- 渲染器初始化 ---
 
@@ -93,26 +93,26 @@ const blender = {
 (function buildBlender() {
     const g = blender.group;
     g.position.set(0, 0, 0);
-    // 底座
+    // 底座 (bigger, more visible)
     const base = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.55, 0.65, 0.25, 16),
+        new THREE.CylinderGeometry(0.75, 0.85, 0.3, 20),
         new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.3, metalness: 0.9 })
     );
-    base.position.y = 0.12; base.castShadow = true;
+    base.position.y = 0.15; base.castShadow = true;
     g.add(base);
-    // 玻璃罐
+    // 玻璃罐 (bigger)
     const jar = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.45, 0.5, 0.9, 16, 1, true),
-        new THREE.MeshPhysicalMaterial({ color: 0x88ccff, transparent: true, opacity: 0.15, roughness: 0.1, metalness: 0.2, side: THREE.DoubleSide })
+        new THREE.CylinderGeometry(0.6, 0.7, 1.2, 20, 1, true),
+        new THREE.MeshPhysicalMaterial({ color: 0x88ccff, transparent: true, opacity: 0.2, roughness: 0.1, metalness: 0.2, side: THREE.DoubleSide })
     );
-    jar.position.y = 0.7; blender.jar = jar;
+    jar.position.y = 0.9; blender.jar = jar;
     g.add(jar);
     // 顶盖
     const lid = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.48, 0.45, 0.08, 16),
+        new THREE.CylinderGeometry(0.63, 0.6, 0.1, 20),
         new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.4, metalness: 0.8 })
     );
-    lid.position.y = 1.18;
+    lid.position.y = 1.55;
     g.add(lid);
     // 排气管
     const pipe = new THREE.Mesh(
@@ -123,8 +123,8 @@ const blender = {
     g.add(pipe);
     // 发光底环
     const gRing = new THREE.Mesh(
-        new THREE.TorusGeometry(0.55, 0.03, 8, 32),
-        new THREE.MeshBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.3 })
+        new THREE.TorusGeometry(0.8, 0.04, 8, 32),
+        new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.4 })
     );
     gRing.rotation.x = -Math.PI / 2; gRing.position.y = 0.02;
     blender.glowRing = gRing;
@@ -139,7 +139,7 @@ function addBlenderBall(palColor) {
         new THREE.SphereGeometry(0.1, 8, 8),
         new THREE.MeshBasicMaterial({ color: new THREE.Color(palColor) })
     );
-    ball.position.set((Math.random() - 0.5) * 0.3, 0.5 + Math.random() * 0.4, (Math.random() - 0.5) * 0.3);
+    ball.position.set((Math.random() - 0.5) * 0.4, 0.6 + Math.random() * 0.5, (Math.random() - 0.5) * 0.4);
     blender.group.add(ball);
     blenderBalls.push(ball);
 }
@@ -172,7 +172,7 @@ function updateBlenderLabel() {
         existing.style.cssText = 'position:absolute;z-index:20;pointer-events:none;text-align:center;font-weight:900;font-size:11px;color:#fbbf24;text-shadow:0 2px 8px rgba(0,0,0,0.8);transform:translate(-50%,-100%);white-space:nowrap;';
         document.getElementById('game-container').appendChild(existing);
     }
-    const pos = blender.group.position.clone().add(new THREE.Vector3(0, 1.8, 0));
+    const pos = blender.group.position.clone().add(new THREE.Vector3(0, 2.0, 0));
     const v = pos.clone().project(_camera);
     const container = document.getElementById('game-container');
     existing.style.left = ((v.x * 0.5 + 0.5) * container.clientWidth) + 'px';
@@ -185,8 +185,8 @@ function updateBlenderLabel() {
         existing.textContent = '等待第二只...';
         existing.style.color = '#fbbf24';
     } else if (blender.state === 'ready') {
-        const a = game.inventory.find(c => c.id === blender.slots[0]);
-        const b = game.inventory.find(c => c.id === blender.slots[1]);
+        const a = blender.slots[0];
+        const b = blender.slots[1];
         const cost = (a && b) ? calcBreedCost(a, b) : '?';
         const compat = (a && b) ? checkGeneCompatibility(a, b) : { type: 'neutral' };
         let txt = `搅拌! -${cost}g`;
@@ -205,15 +205,38 @@ function updateBlenderLabel() {
     if (blender.state !== 'ready') { existing.style.pointerEvents = 'none'; existing.onclick = null; }
 }
 
+function updateFacilityLabels() {
+    const container = document.getElementById('game-container');
+    const facilities = [
+        { id: 'cloner-label', group: clonerGroup, text: '📋 复制机', color: '#22d3ee', yOffset: 1.5 },
+        { id: 'healer-label', group: healerGroup, text: '💊 治疗仪', color: '#4ade80', yOffset: 1.2 },
+    ];
+    for (const f of facilities) {
+        let el = document.getElementById(f.id);
+        if (!el) {
+            el = document.createElement('div');
+            el.id = f.id;
+            el.style.cssText = 'position:absolute;z-index:18;pointer-events:none;text-align:center;font-weight:900;font-size:10px;text-shadow:0 2px 6px rgba(0,0,0,0.8);transform:translate(-50%,-100%);white-space:nowrap;';
+            container.appendChild(el);
+        }
+        const pos = f.group.position.clone().add(new THREE.Vector3(0, f.yOffset, 0));
+        const v = pos.clone().project(_camera);
+        el.style.left = ((v.x * 0.5 + 0.5) * container.clientWidth) + 'px';
+        el.style.top = ((-v.y * 0.5 + 0.5) * container.clientHeight) + 'px';
+        el.textContent = f.text;
+        el.style.color = f.color;
+    }
+}
+
 function addToBlender(creatureId) {
     const creature = game.inventory.find(c => c.id === creatureId);
     if (!creature) return;
     const age = getAgeStage(creature.age ?? 0);
-    if (age.name === '幼崽' || age.name === '少年') {
-        showToast(age.name === '幼崽' ? '幼崽太小了，不能繁殖!' : '少年还没长大!');
+    if (age.name === '幼年') {
+        showToast('幼年太小了，不能放进搅拌机!');
         return;
     }
-    if (blender.slots[0] === creatureId || blender.slots[1] === creatureId) {
+    if ((blender.slots[0] && blender.slots[0].id === creatureId) || (blender.slots[1] && blender.slots[1].id === creatureId)) {
         showToast('已经在搅拌机里了!');
         return;
     }
@@ -243,20 +266,26 @@ function addToBlender(creatureId) {
     const pal = PALETTES[creature.dna[0]];
     addBlenderBall(pal.border);
 
+    // Remove from inventory immediately (parents are consumed)
+    const invIdx = game.inventory.findIndex(c => c.id === creatureId);
+    if (invIdx >= 0) game.inventory.splice(invIdx, 1);
+    displayEntities.delete(creatureId);
+
     if (blender.slots[0] === null) {
-        blender.slots[0] = creatureId;
+        blender.slots[0] = creature; // store full creature object, not just ID
         blender.state = 'one';
     } else {
-        blender.slots[1] = creatureId;
+        blender.slots[1] = creature;
         blender.state = 'ready';
     }
     if (selectedCreatureId === creatureId) deselectCreature();
+    renderHUD();
 }
 
 function doBlenderBreed() {
     if (blender.state !== 'ready') return;
-    const parentA = game.inventory.find(c => c.id === blender.slots[0]);
-    const parentB = game.inventory.find(c => c.id === blender.slots[1]);
+    const parentA = blender.slots[0]; // creature objects stored directly
+    const parentB = blender.slots[1];
     if (!parentA || !parentB) { resetBlender(); return; }
     if (parentA.id === parentB.id) { showToast('不能自交! 上次有人试过，我们失去了一个实验室。'); resetBlender(); return; }
     const cost = calcBreedCost(parentA, parentB);
@@ -338,12 +367,98 @@ function finishBlenderBreed(parentA, parentB, catalyst) {
     }
 }
 
+function ejectBlender() {
+    // Put creatures back into inventory
+    for (const slot of blender.slots) {
+        if (slot && slot.id) {
+            if (!game.inventory.find(c => c.id === slot.id)) {
+                game.inventory.push(slot);
+            }
+        }
+    }
+    blender.slots = [null, null];
+    blender.state = 'empty';
+    clearBlenderBalls();
+    refreshDisplayCreatures();
+    renderHUD();
+}
+
+window.ejectBlender = ejectBlender;
+window.doBlenderBreed = doBlenderBreed;
+
 function resetBlender() {
+    // After successful breed — parents are consumed, don't put back
     blender.slots = [null, null];
     blender.state = 'empty';
     clearBlenderBalls();
     refreshDisplayCreatures();
 }
+
+// --- 📋 复制机 3D (平台左侧) ---
+let clonerGroup = new THREE.Group();
+(function buildCloner() {
+    clonerGroup.position.set(-3.2, 0, -1);
+    // 大底座 — 亮色让它突出
+    const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.65, 0.75, 0.3, 16),
+        new THREE.MeshStandardMaterial({ color: 0x164e63, roughness: 0.3, metalness: 0.7 })
+    );
+    base.position.y = 0.15; base.castShadow = true;
+    clonerGroup.add(base);
+    // 玻璃罩 (半透明蓝)
+    const jar = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.5, 0.55, 0.8, 16, 1, true),
+        new THREE.MeshPhysicalMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.18, roughness: 0.1, side: THREE.DoubleSide })
+    );
+    jar.position.y = 0.7; clonerGroup.add(jar);
+    // 顶盖
+    const lid = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.52, 0.5, 0.08, 16),
+        new THREE.MeshStandardMaterial({ color: 0x0e7490, metalness: 0.8 })
+    );
+    lid.position.y = 1.12; clonerGroup.add(lid);
+    // 发光底环
+    const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.7, 0.04, 8, 32),
+        new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.6 })
+    );
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02;
+    clonerGroup.add(ring);
+    _scene.add(clonerGroup);
+})();
+
+// --- 💊 治疗仪 3D (平台右侧) ---
+let healerGroup = new THREE.Group();
+(function buildHealer() {
+    healerGroup.position.set(3.2, 0, -1);
+    // 大底座
+    const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.6, 0.7, 0.3, 16),
+        new THREE.MeshStandardMaterial({ color: 0x14532d, roughness: 0.3, metalness: 0.7 })
+    );
+    base.position.y = 0.15; base.castShadow = true;
+    healerGroup.add(base);
+    // 十字标志 — 大的、发光的
+    const crossMat = new THREE.MeshBasicMaterial({ color: 0x4ade80 });
+    const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.12, 0.18), crossMat);
+    crossH.position.y = 0.9; healerGroup.add(crossH);
+    const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, 0.6), crossMat);
+    crossV.position.y = 0.9; healerGroup.add(crossV);
+    // 柱子
+    const pillar = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.1, 0.1, 0.6, 8),
+        new THREE.MeshStandardMaterial({ color: 0x166534, metalness: 0.8 })
+    );
+    pillar.position.y = 0.5; healerGroup.add(pillar);
+    // 发光底环
+    const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.65, 0.04, 8, 32),
+        new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0.6 })
+    );
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02;
+    healerGroup.add(ring);
+    _scene.add(healerGroup);
+})();
 
 // 相机初始位置 — 俯视全景
 _camera.position.set(0, 6, 8);
@@ -376,7 +491,7 @@ function buildCreatureForDisplay(creature) {
     setCurrentDNA(savedDNA); setCurrentExpression(savedExpr);
     if (group) {
         const age = getAgeStage(creature.age ?? 0);
-        const baseScale = age.name === '幼崽' ? 0.2 : age.name === '少年' ? 0.28 : 0.35;
+        const baseScale = age.name === '幼年' ? 0.2 : age.name === '少年' ? 0.28 : 0.35;
         group.scale.setScalar(baseScale);
         group.userData.creatureId = creature.id;
         group.userData.baseScale = baseScale;
@@ -385,9 +500,25 @@ function buildCreatureForDisplay(creature) {
 }
 
 function randomPlatformPos() {
+    // Generate random position that avoids all facilities
+    const facilities = [
+        { pos: blender.group.position, r: 1.8 },
+        { pos: clonerGroup.position, r: 1.3 },
+        { pos: healerGroup.position, r: 1.3 },
+    ];
+    for (let attempt = 0; attempt < 30; attempt++) {
+        const angle = Math.random() * Math.PI * 2;
+        const r = 1.5 + Math.random() * (PLATFORM_RADIUS - 2.5); // avoid center and edge
+        const pos = new THREE.Vector3(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+        let tooClose = false;
+        for (const f of facilities) {
+            if (pos.distanceTo(f.pos) < f.r) { tooClose = true; break; }
+        }
+        if (!tooClose) return pos;
+    }
+    // Fallback: just put at edge
     const angle = Math.random() * Math.PI * 2;
-    const r = Math.random() * (PLATFORM_RADIUS - 1);
-    return new THREE.Vector3(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+    return new THREE.Vector3(Math.cos(angle) * (PLATFORM_RADIUS - 1), 0, Math.sin(angle) * (PLATFORM_RADIUS - 1));
 }
 
 function refreshDisplayCreatures() {
@@ -418,27 +549,103 @@ function refreshDisplayCreatures() {
 }
 
 function updateWandering(dt) {
+    const COLLISION_RADIUS = 0.9;  // 生物间最小距离
+    const BLENDER_RADIUS = 1.6;    // 搅拌机回避半径 (bigger blender)
+    const FACILITY_RADIUS = 1.2;   // 复制机/治疗仪回避半径
+    const allPositions = [];
+    for (const [, e] of displayEntities) { if (e.group.parent) allPositions.push(e); }
+
     for (const [id, entity] of displayEntities) {
+        if (!entity.group.parent) continue; // in blender, skip
         if (id === selectedCreatureId) {
-            // Selected: idle breathing, no wandering
             const t = Date.now() * 0.001;
             entity.group.scale.setScalar(0.38 + Math.sin(t * 3) * 0.01);
             continue;
         }
+        if (isDragging && dragState && dragState.creatureId === id) continue; // being dragged
+
         const { group, targetPos, speed } = entity;
-        const dx = targetPos.x - group.position.x;
-        const dz = targetPos.z - group.position.z;
-        const dist = Math.sqrt(dx * dx + dz * dz);
-        if (dist < 0.2) {
+        let dx = targetPos.x - group.position.x;
+        let dz = targetPos.z - group.position.z;
+        let dist = Math.sqrt(dx * dx + dz * dz);
+
+        // 到达目标 → 新目标
+        if (dist < 0.3) {
             entity.targetPos = randomPlatformPos();
-        } else {
-            group.position.x += (dx / dist) * speed;
-            group.position.z += (dz / dist) * speed;
-            // Face movement direction
-            const targetAngle = Math.atan2(dx, dz);
+            dx = entity.targetPos.x - group.position.x;
+            dz = entity.targetPos.z - group.position.z;
+            dist = Math.sqrt(dx * dx + dz * dz);
+        }
+
+        // 移动方向
+        let moveX = dist > 0.01 ? (dx / dist) * speed : 0;
+        let moveZ = dist > 0.01 ? (dz / dist) * speed : 0;
+
+        // 碰撞回避: 其他生物 — hard push
+        for (const other of allPositions) {
+            if (other === entity || !other.group.parent) continue;
+            const ox = group.position.x - other.group.position.x;
+            const oz = group.position.z - other.group.position.z;
+            const od = Math.sqrt(ox * ox + oz * oz);
+            if (od < COLLISION_RADIUS && od > 0.001) {
+                // Hard push: teleport outward to minimum distance
+                const pushDist = (COLLISION_RADIUS - od) * 0.5 + 0.02;
+                group.position.x += (ox / od) * pushDist;
+                group.position.z += (oz / od) * pushDist;
+                entity.targetPos = randomPlatformPos(); // pick new target
+            }
+        }
+
+        // 碰撞回避: 搅拌机 — hard boundary
+        const bx = group.position.x - blender.group.position.x;
+        const bz = group.position.z - blender.group.position.z;
+        const bd = Math.sqrt(bx * bx + bz * bz);
+        if (bd < BLENDER_RADIUS) {
+            if (bd > 0.001) {
+                group.position.x = blender.group.position.x + (bx / bd) * BLENDER_RADIUS;
+                group.position.z = blender.group.position.z + (bz / bd) * BLENDER_RADIUS;
+            } else {
+                group.position.x = blender.group.position.x + BLENDER_RADIUS;
+            }
+            entity.targetPos = randomPlatformPos();
+        }
+
+        // 碰撞回避: 复制机和治疗仪 — hard boundary
+        for (const facility of [clonerGroup, healerGroup]) {
+            if (!facility) continue;
+            const fx = group.position.x - facility.position.x;
+            const fz = group.position.z - facility.position.z;
+            const fd = Math.sqrt(fx * fx + fz * fz);
+            if (fd < FACILITY_RADIUS) {
+                if (fd > 0.001) {
+                    group.position.x = facility.position.x + (fx / fd) * FACILITY_RADIUS;
+                    group.position.z = facility.position.z + (fz / fd) * FACILITY_RADIUS;
+                } else {
+                    group.position.x = facility.position.x + FACILITY_RADIUS;
+                }
+                entity.targetPos = randomPlatformPos();
+            }
+        }
+
+        group.position.x += moveX;
+        group.position.z += moveZ;
+
+        // 保持在平台范围内
+        const fromCenter = Math.sqrt(group.position.x ** 2 + group.position.z ** 2);
+        if (fromCenter > PLATFORM_RADIUS - 0.5) {
+            const angle = Math.atan2(group.position.z, group.position.x);
+            group.position.x = Math.cos(angle) * (PLATFORM_RADIUS - 0.6);
+            group.position.z = Math.sin(angle) * (PLATFORM_RADIUS - 0.6);
+            entity.targetPos = randomPlatformPos();
+        }
+
+        // 面朝移动方向
+        if (Math.abs(moveX) + Math.abs(moveZ) > 0.001) {
+            const targetAngle = Math.atan2(moveX, moveZ);
             group.rotation.y += (targetAngle - group.rotation.y) * 0.05;
         }
-        // Idle breathing
+
+        // idle 呼吸
         const t = Date.now() * 0.001 + id;
         const bs = group.userData.baseScale || 0.35;
         group.scale.setScalar(bs + Math.sin(t * 2.5) * 0.008);
@@ -469,6 +676,10 @@ _renderer.domElement.addEventListener('mousedown', (e) => {
     mouseDownId = getHitCreatureId(e);
     mouseMoved = false;
     isDragging = false;
+    // If mouse hit a creature, immediately disable orbit to prevent camera rotation during potential drag
+    if (mouseDownId) {
+        _controls.enabled = false;
+    }
 });
 
 _renderer.domElement.addEventListener('mousemove', (e) => {
@@ -497,9 +708,11 @@ _renderer.domElement.addEventListener('mousemove', (e) => {
             entity.group.position.x = pt.x;
             entity.group.position.z = pt.z;
         }
-        // Blender proximity glow
-        const dist = pt ? pt.distanceTo(blender.group.position) : 99;
-        blender.glowRing.material.opacity = dist < 1.5 ? 0.9 : (blender.state === 'empty' ? 0.3 : 0.7);
+        // Proximity glow for facilities
+        if (pt) {
+            const distB = pt.distanceTo(blender.group.position);
+            blender.glowRing.material.opacity = distB < 1.8 ? 0.9 : 0.4;
+        }
     }
 });
 
@@ -507,20 +720,53 @@ _renderer.domElement.addEventListener('mouseup', (e) => {
     if (isDragging && dragState) {
         _controls.enabled = true;
         const entity = displayEntities.get(dragState.creatureId);
-        // Check if dropped near blender
         if (entity && entity.group) {
-            const dist = entity.group.position.distanceTo(blender.group.position);
-            if (dist < 1.5) {
+            const creature = game.inventory.find(c => c.id === dragState.creatureId);
+            const distBlender = entity.group.position.distanceTo(blender.group.position);
+            const distCloner = entity.group.position.distanceTo(clonerGroup.position);
+            const distHealer = entity.group.position.distanceTo(healerGroup.position);
+
+            if (distBlender < 1.8) {
                 addToBlender(dragState.creatureId);
-            } else {
-                entity.group.scale.setScalar(0.35); // reset scale
+            } else if (distCloner < 1.5 && creature) {
+                // Clone machine
+                const cost = getCloneCost(creature);
+                if (game.coins < cost) { showToast(`复制费用不足! 需要${cost}g`); }
+                else if (game.inventory.length >= 8) { showToast('库存已满!'); }
+                else {
+                    const clone = cloneCreature(creature);
+                    if (clone) {
+                        game.inventory.push(clone);
+                        const hasDefect = clone.defects.length > creature.defects.length;
+                        showToast(hasDefect ? `复制完成...但有失真: ${clone.defects[clone.defects.length-1]}` : '复制完成!');
+                        refreshDisplayCreatures();
+                        renderHUD();
+                    }
+                }
+            } else if (distHealer < 1.5 && creature && creature.injuries.length > 0) {
+                // Heal machine — heal first injury
+                const injId = creature.injuries[0];
+                if (healInjury(creature, injId)) {
+                    const inj = INJURIES.find(i => i.id === injId);
+                    showToast(`治疗成功: ${inj?.n || injId} 已修复`);
+                    renderHUD();
+                    if (selectedCreatureId === creature.id) renderCreaturePanel();
+                } else {
+                    showToast(`治疗费用不足! 需要${HEALER_COST_PER_INJURY}g`);
+                }
             }
+            // Reset scale
+            const bs = entity.group.userData.baseScale || 0.35;
+            entity.group.scale.setScalar(bs);
         }
         dragState = null;
         isDragging = false;
         mouseDownId = null;
         return;
     }
+
+    // Re-enable orbit if not dragging
+    _controls.enabled = true;
 
     // Normal click (short press, no drag)
     if (!mouseMoved || (Date.now() - mouseDownTime) < 300) {
@@ -529,11 +775,19 @@ _renderer.domElement.addEventListener('mouseup', (e) => {
         if (hitId) {
             selectCreature(hitId);
         } else {
-            // Check if clicked blender
+            // Check if clicked any facility
             raycaster.setFromCamera(mouse, _camera);
             const blenderHit = raycaster.intersectObject(blender.group, true);
-            if (blenderHit.length > 0 && blender.state === 'ready') {
-                doBlenderBreed();
+            const clonerHit = raycaster.intersectObject(clonerGroup, true);
+            const healerHit = raycaster.intersectObject(healerGroup, true);
+            if (blenderHit.length > 0 && (blender.state === 'one' || blender.state === 'ready')) {
+                openFacilityPanel('blender');
+            } else if (clonerHit.length > 0) {
+                openFacilityPanel('cloner');
+            } else if (healerHit.length > 0) {
+                openFacilityPanel('healer');
+            } else if (smugglerModel && raycaster.intersectObject(smugglerModel, true).length > 0) {
+                openSmugglerShop();
             } else {
                 deselectCreature();
             }
@@ -546,13 +800,7 @@ _renderer.domElement.addEventListener('mouseup', (e) => {
 function selectCreature(id) {
     selectedCreatureId = id;
     game.viewingId = id;
-    const entity = displayEntities.get(id);
-    if (entity) {
-        // Camera focus on selected creature (45° side view)
-        const pos = entity.group.position;
-        const targetCamPos = new THREE.Vector3(pos.x + 3, 3, pos.z + 4);
-        animateCamera(targetCamPos, new THREE.Vector3(pos.x, 0.3, pos.z));
-    }
+    // No camera movement — just open the panel
     renderCreaturePanel();
     renderHUD();
 }
@@ -561,7 +809,7 @@ function deselectCreature() {
     selectedCreatureId = null;
     game.viewingId = null;
     hideCreaturePanel();
-    animateCamera(cameraHome.pos.clone(), cameraHome.target.clone());
+    // Don't snap camera back — let player keep their current view
     renderHUD();
 }
 
@@ -634,13 +882,14 @@ function renderCreaturePanel() {
         return `<span class="gene-chip ${r}">${GENE_LABELS[i]} ${gene}${!isColor ? '-'+et.name : ''}</span>`;
     }).join('');
 
-    const canFight = age.name !== '幼崽' && !creature.cooldown;
-    const canBreed = age.name !== '幼崽' && age.name !== '少年';
-    const isInBlender = blender.slots.includes(creature.id);
+    const canFight = age.canBattle && !creature.cooldown;
+    const canBreed = age.name !== '幼年' && age.name !== '少年';
+    const isInBlender = blender.slots.some(s => s?.id === creature.id);
 
     // 年龄进度条
     const bc = creature.age ?? 0;
-    const ageProgress = bc <= 0 ? '幼崽 🍼' : bc <= 2 ? `少年 ${'█'.repeat(bc)}${'░'.repeat(2-bc)}` : bc <= 8 ? `成年 ${'█'.repeat(Math.min(6, bc-2))}${'░'.repeat(Math.max(0, 8-bc))}` : bc <= 14 ? `老年 ⚠` : '暮年 💀';
+    const ageProgress = `${age.icon} ${age.name} (${'██'.repeat(Math.min(bc, 5))}${'░░'.repeat(Math.max(0, 5-bc))})`;
+    // bc here is creature.age (0-5)
 
     content.innerHTML = `
         <div class="paper-name" style="color:${pal.border}">${pal.name}</div>
@@ -657,7 +906,7 @@ function renderCreaturePanel() {
         ${isInBlender ? '<div style="font-size:10px; color:#fbbf24; margin:4px 0;">已在搅拌机中</div>' : ''}
         ${!canBreed ? '<div style="font-size:10px; color:#ef4444; margin:4px 0;">太小了，不能繁殖</div>' : ''}
         <div class="paper-actions">
-            <button class="paper-btn paper-btn-fight" onclick="openArena(${creature.id})" ${canFight ? '' : 'disabled'}>${canFight ? '⚔️ 竞技' : age.name === '幼崽' ? '🍼 幼崽' : '冷却'}</button>
+            <button class="paper-btn paper-btn-fight" onclick="openArena(${creature.id})" ${canFight ? '' : 'disabled'}>${canFight ? '⚔️ 竞技' : age.name === '幼年' ? '🍼 幼年' : '冷却'}</button>
             <button class="paper-btn paper-btn-sell" onclick="confirmSell(${creature.id})">💰 ${value}g</button>
         </div>
     `;
@@ -707,7 +956,7 @@ function doSell(id) {
     game.coins += value;
     game.inventory.splice(idx, 1);
     // 清理搅拌机
-    if (blender.slots[0] === id || blender.slots[1] === id) resetBlender();
+    if ((blender.slots[0]?.id === id) || (blender.slots[1]?.id === id)) ejectBlender();
     if (selectedCreatureId === id) deselectCreature();
     showToast(`卖出! +${value} 金币`);
     refreshDisplayCreatures();
@@ -1305,16 +1554,13 @@ function startGridBattle() {
     const team = arenaState.selectedTeam.map(id => game.inventory.find(c => c.id === id)).filter(Boolean);
     if (!team.length) return;
     const mode = arenaState.mode;
-    const tierIdx = mode === 1 ? 0 : mode === 3 ? 1 : 2;
-    const tier = WAVE_TIERS[tierIdx];
-    const entry = [5, 15, 40][tierIdx];
+    const entry = [5, 15, 40][mode === 1 ? 0 : mode === 3 ? 1 : 2];
     if (game.coins < entry) { showToast('金币不足!'); return; }
     game.coins -= entry;
-    arenaState.tierIdx = tierIdx;
+    arenaState.entry = entry;
     arenaState.currentWave = 1;
-    const power = tier.npcPowerMin + (tier.npcPowerMax - tier.npcPowerMin) * (1 / tier.waves);
-    const npcTeam = [];
-    for (let i = 0; i < mode; i++) npcTeam.push(generateNPC(power));
+    // Use chosen NPCs from 3-pick-1 selection (or generate fallback)
+    const npcTeam = arenaState.chosenNPCs || [generateNPC(30)];
     document.getElementById('arena-overlay').classList.remove('active');
     document.getElementById('battle-arena').classList.add('active');
     hideCreaturePanel();
@@ -1405,6 +1651,16 @@ function runGridRound() {
         unit.hp = Math.max(0, unit.hp);
         if (skill.maxCd) skill.cd = skill.maxCd + 1;
         unit.mana = Math.max(0, (unit.mana || 0) - (skill.manaCost || 0));
+
+        // 战斗记忆追踪
+        if (unit.creature.battleMemory) {
+            if (result.dmg > 0) unit.creature.battleMemory.damageDealt += result.dmg;
+            if (result.heal > 0) unit.creature.battleMemory.healed += result.heal;
+            if (result.dodged) unit.creature.battleMemory.dodged += 1;
+        }
+        if (target.creature.battleMemory && result.dmg > 0) {
+            target.creature.battleMemory.damageTaken += result.dmg;
+        }
 
         // center skill name
         const center = document.getElementById('bhud-center');
@@ -1498,52 +1754,68 @@ function endGridBattle(win) {
     const tier = WAVE_TIERS[arenaState.tierIdx || 0];
     const reward = tier.baseReward + tier.waveReward * waveNum;
 
-    // 所有参战生物 age+1
+    // 所有参战生物 age+1 + battleMemory更新
     arenaState.selectedTeam.forEach(id => {
         const c = game.inventory.find(x => x.id === id);
-        if (c) c.age = (c.age ?? 0) + 1;
+        if (c) {
+            c.age = (c.age ?? 0) + 1;
+            if (c.battleMemory) { if (win) c.battleMemory.wins++; else c.battleMemory.losses++; }
+        }
     });
 
-    // 研究点 (Legionbound: 无论胜负都获得)
-    const rp = Math.max(1, Math.floor(waveNum * 2));
-    game.researchPoints += rp;
+    // 奖励计算 (3选1难度对应不同奖励)
+    const difficulty = arenaState.chosenDifficulty || ARENA_DIFFICULTY[1]; // 默认均衡
+    const rewardInfo = calcArenaReward(difficulty, win);
+    game.coins += rewardInfo.gold;
+    game.researchPoints += rewardInfo.rp;
 
     if (win) {
-        game.coins += entry + reward;
         arenaState.catalystDrop = null;
-        if (Math.random() < 0.35) {
-            if (mode >= 5 || Math.random() < 0.5) { game.catalysts.mutate++; arenaState.catalystDrop = '突变催化剂'; }
+        if (rewardInfo.catalystChance > 0 && Math.random() < rewardInfo.catalystChance) {
+            if (Math.random() < 0.5) { game.catalysts.mutate++; arenaState.catalystDrop = '突变催化剂'; }
             else { game.catalysts.expr++; arenaState.catalystDrop = '表达催化剂'; }
         }
         arenaState.selectedTeam.forEach(id => {
             const c = game.inventory.find(x => x.id === id);
-            if (c) { c.wins++; c.streak++; c.maxStreak = Math.max(c.maxStreak, c.streak); c.cooldown = true; }
+            if (c) { c.wins++; c.streak++; c.maxStreak = Math.max(c.maxStreak, c.streak); }
         });
-        arenaState.prize = reward;
-        arenaState.rp = rp;
+        arenaState.prize = rewardInfo.gold;
+        arenaState.rp = rewardInfo.rp;
         arenaState.step = 'result-win';
     } else {
-        // MewGenics式: 被击倒的生物获得永久受伤
+        // 被击倒→rollInjuryTier决定受伤等级
         const downedUnits = bScene ? bScene.playerUnits.filter(u => !u.alive) : [];
         const injuryReports = [];
+        const deathReports = [];
         arenaState.selectedTeam.forEach(id => {
             const c = game.inventory.find(x => x.id === id);
             if (!c) return;
-            c.losses++; c.streak = 0; c.cooldown = true;
-            // 被击倒的单位获得受伤
-            const wasDownd = downedUnits.some(u => u.creature.id === id);
-            if (wasDownd) {
-                const injury = rollInjury();
-                c.injuries = c.injuries || [];
-                if (!c.injuries.includes(injury.id)) {
-                    c.injuries.push(injury.id);
-                    injuryReports.push(`${PALETTES[c.dna[0]].name}: ${injury.n}`);
+            c.losses++; c.streak = 0;
+            const wasDowned = downedUnits.some(u => u.creature.id === id);
+            if (wasDowned) {
+                const tier = rollInjuryTier();
+                if (tier.tier === 'fatal') {
+                    // 致命: 死亡
+                    deathReports.push(PALETTES[c.dna[0]].name);
+                    const idx = game.inventory.findIndex(x => x.id === id);
+                    if (idx >= 0) game.inventory.splice(idx, 1);
+                } else if (tier.tier === 'heavy' || tier.tier === 'light') {
+                    const injury = rollInjury();
+                    c.injuries = c.injuries || [];
+                    if (!c.injuries.includes(injury.id)) {
+                        c.injuries.push(injury.id);
+                        injuryReports.push(`${PALETTES[c.dna[0]].name}: ${injury.n} (${tier.label})`);
+                    }
+                    if (tier.needsRest) c.cooldown = true;
                 }
+                // tier === 'none': 无伤
             }
-            c.baseValue = calcBaseValue(c.dna, c.expression);
+            if (game.inventory.find(x => x.id === id)) c.baseValue = calcBaseValue(c.dna, c.expression);
         });
         arenaState.injuryReports = injuryReports;
-        arenaState.rp = rp;
+        arenaState.deathReports = deathReports;
+        arenaState.rp = rewardInfo.rp;
+        arenaState.prize = rewardInfo.gold;
         arenaState.step = 'result-loss';
     }
 
@@ -1580,35 +1852,95 @@ window.closeArena = closeArena;
 
 function renderArenaMenu() {
     const panel = document.getElementById('arena-panel-content');
+
     if (arenaState.step === 'select-mode') {
         const rpDisplay = game.researchPoints > 0 ? `<div style="font-size:11px; color:#a78bfa; margin-bottom:8px;">🔬 研究点: ${game.researchPoints}</div>` : '';
-        panel.innerHTML = '<div class="arena-title">竞技场</div>' + rpDisplay + '<div style="font-size:13px; color:#94a3b8; margin-bottom:16px;">选择出战规模</div><div class="arena-select"><div class="arena-card" onclick="selectBattleMode(1)"><div class="arena-card-name" style="color:#22c55e">1v1</div><div class="arena-card-info">训练场 | 5g</div></div><div class="arena-card" onclick="selectBattleMode(3)"' + (game.inventory.filter(c => !c.cooldown && getAgeStage(c.age??0).name !== '幼崽').length < 3 ? ' style="opacity:0.3"' : '') + '><div class="arena-card-name" style="color:#a855f7">3v3</div><div class="arena-card-info">竞技场 | 15g</div></div><div class="arena-card" onclick="selectBattleMode(5)"' + (game.inventory.filter(c => !c.cooldown && getAgeStage(c.age??0).name !== '幼崽').length < 5 ? ' style="opacity:0.3"' : '') + '><div class="arena-card-name" style="color:#ef4444">5v5</div><div class="arena-card-info">深渊 | 40g</div></div></div><button class="btn-arena-back" onclick="closeArena()">返回</button>';
+        const battleReady = game.inventory.filter(c => !c.cooldown && getAgeStage(c.age??0).canBattle);
+        panel.innerHTML = `<div class="arena-title">竞技场</div>${rpDisplay}
+            <div style="font-size:13px; color:#94a3b8; margin-bottom:16px;">选择出战规模 (可战斗: ${battleReady.length}只)</div>
+            <div class="arena-select">
+                <div class="arena-card" onclick="selectBattleMode(1)"><div class="arena-card-name" style="color:#22c55e">1v1</div><div class="arena-card-info">5g</div></div>
+                <div class="arena-card" onclick="selectBattleMode(3)" ${battleReady.length < 3 ? 'style="opacity:0.3;pointer-events:none"' : ''}><div class="arena-card-name" style="color:#a855f7">3v3</div><div class="arena-card-info">15g</div></div>
+                <div class="arena-card" onclick="selectBattleMode(5)" ${battleReady.length < 5 ? 'style="opacity:0.3;pointer-events:none"' : ''}><div class="arena-card-name" style="color:#ef4444">5v5</div><div class="arena-card-info">40g</div></div>
+            </div>
+            <button class="btn-arena-back" onclick="closeArena()">返回</button>`;
+
     } else if (arenaState.step === 'select-team') {
         const mode = arenaState.mode;
         const selected = arenaState.selectedTeam;
-        const available = game.inventory.filter(c => !c.cooldown && getAgeStage(c.age??0).name !== '幼崽');
-        let slotsHtml = available.map(c => {
+        const available = game.inventory.filter(c => !c.cooldown && getAgeStage(c.age??0).canBattle);
+        const slotsHtml = available.map(c => {
             const pal = PALETTES[c.dna[0]];
             const isSel = selected.includes(c.id);
             const stats = calcCreatureStats(c);
             const age = getAgeStage(c.age ?? 0);
-            const injCount = (c.injuries||[]).length;
-            return '<div class="deploy-slot ' + (isSel ? 'selected' : '') + '" onclick="toggleTeamMember(' + c.id + ')"><div style="color:' + pal.border + '; font-size:13px;">' + pal.name + '</div><div style="color:#64748b; font-size:10px;">' + (CHASSIS_ROLE[c.dna[1]]?.role || '') + ' ' + age.name + ' 战力' + stats.total + (injCount > 0 ? ' 🩹×' + injCount : '') + '</div></div>';
+            return `<div class="deploy-slot ${isSel ? 'selected' : ''}" onclick="toggleTeamMember(${c.id})"><div style="color:${pal.border};font-size:13px;">${pal.name}</div><div style="color:#64748b;font-size:10px;">${CHASSIS_ROLE[c.dna[1]]?.role||''} ${age.icon}${age.name} 战力${stats.total}</div></div>`;
         }).join('');
-
-        // 协同预览 (Legionbound式)
         const selectedCreatures = selected.map(id => game.inventory.find(c => c.id === id)).filter(Boolean);
         const synergies = detectSynergies(selectedCreatures);
-        const synHtml = synergies.length > 0 ? '<div style="font-size:11px; color:#fbbf24; margin:8px 0;">🤝 协同: ' + synergies.map(s => s.n).join(', ') + '</div>' : '';
+        const synHtml = synergies.length > 0 ? `<div style="font-size:11px; color:#fbbf24; margin:8px 0;">🤝 ${synergies.map(s => s.n).join(', ')}</div>` : '';
+        panel.innerHTML = `<div class="arena-title">${mode}v${mode} 选择队伍</div>
+            <div style="font-size:12px; color:#94a3b8; margin-bottom:8px;">已选 ${selected.length}/${mode}</div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:8px;">${slotsHtml}</div>
+            ${synHtml}
+            <button class="btn-fight" onclick="showOpponentSelection()" ${selected.length === mode ? '' : 'disabled'}>选择对手</button><br>
+            <button class="btn-arena-back" onclick="closeArena()">返回</button>`;
 
-        panel.innerHTML = '<div class="arena-title">' + mode + 'v' + mode + ' 选择队伍</div><div style="font-size:12px; color:#94a3b8; margin-bottom:12px;">已选 ' + selected.length + '/' + mode + '</div><div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:8px;">' + slotsHtml + '</div>' + synHtml + '<button class="btn-fight" onclick="startGridBattle()"' + (selected.length === mode ? '' : ' disabled') + '>出战!</button><br><button class="btn-arena-back" onclick="closeArena()">返回</button>';
+    } else if (arenaState.step === 'select-opponent') {
+        // 3选1对手!
+        const opponents = arenaState.opponents;
+        const oppsHtml = opponents.map((opp, i) => {
+            const diff = opp.difficulty;
+            const color = diff.key === 'weak' ? '#22c55e' : diff.key === 'even' ? '#fbbf24' : '#ef4444';
+            const goldRange = `${diff.rewardGold[0]}-${diff.rewardGold[1]}g`;
+            return `<div class="arena-card" onclick="chooseOpponent(${i})" style="border-color:${color};min-width:140px;">
+                <div class="arena-card-name" style="color:${color}">${diff.label}</div>
+                <div style="font-size:18px;font-weight:900;color:#f8fafc;margin:6px 0;">战力 ${opp.totalPower}</div>
+                <div class="arena-card-info">队伍 ${opp.npcs.length}只</div>
+                <div style="font-size:11px;color:${color};margin-top:4px;">奖励: ${goldRange} + ${diff.rewardRP}RP</div>
+                ${diff.catalystChance > 0 ? `<div style="font-size:10px;color:#a78bfa;">${Math.round(diff.catalystChance*100)}% 催化剂</div>` : ''}
+            </div>`;
+        }).join('');
+        panel.innerHTML = `<div class="arena-title">选择对手</div>
+            <div style="font-size:12px; color:#94a3b8; margin-bottom:12px;">你的战力: ${arenaState.playerPower} | 选择一个对手</div>
+            <div class="arena-select">${oppsHtml}</div>
+            <button class="btn-arena-back" onclick="arenaState.step='select-team';renderArenaMenu()">返回选队</button>`;
+
     } else if (arenaState.step === 'result-win') {
-        panel.innerHTML = '<div class="arena-result-title" style="color:#fbbf24">胜利!</div><div style="font-size:22px; font-weight:900; color:#22c55e; margin:8px 0;">+' + arenaState.prize + 'g</div><div style="font-size:12px; color:#a78bfa; margin:4px 0;">+' + (arenaState.rp || 0) + ' 研究点</div>' + (arenaState.catalystDrop ? '<div style="font-size:12px; color:#a78bfa; margin:4px 0;">' + arenaState.catalystDrop + '</div>' : '') + '<button class="btn-fight" style="background:#22c55e; border-color:#86efac; box-shadow:0 5px 0 #166534;" onclick="closeArena()">收下奖励!</button>';
+        panel.innerHTML = `<div class="arena-result-title" style="color:#fbbf24">胜利!</div>
+            <div style="font-size:22px; font-weight:900; color:#22c55e; margin:8px 0;">+${arenaState.prize}g</div>
+            <div style="font-size:12px; color:#a78bfa; margin:4px 0;">+${arenaState.rp || 0} 研究点</div>
+            ${arenaState.catalystDrop ? `<div style="font-size:12px; color:#a78bfa; margin:4px 0;">🧪 ${arenaState.catalystDrop}</div>` : ''}
+            <button class="btn-fight" style="background:#22c55e; border-color:#86efac; box-shadow:0 5px 0 #166534;" onclick="closeArena()">收下奖励!</button>`;
+
     } else if (arenaState.step === 'result-loss') {
-        const injHtml = (arenaState.injuryReports || []).length > 0 ? '<div style="font-size:12px; color:#ef4444; margin:6px 0;">🩹 受伤:<br>' + arenaState.injuryReports.join('<br>') + '</div>' : '';
-        panel.innerHTML = '<div class="arena-result-title" style="color:#ef4444">战败</div>' + injHtml + '<div style="font-size:12px; color:#a78bfa; margin:4px 0;">+' + (arenaState.rp || 0) + ' 研究点</div><div style="font-size:13px; color:#94a3b8; margin:8px 0;">被击倒的生物获得永久伤害</div><button class="btn-arena-back" onclick="closeArena()">继续...</button>';
+        const injHtml = (arenaState.injuryReports || []).length > 0 ? `<div style="font-size:12px; color:#ef4444; margin:6px 0;">🩹 受伤:<br>${arenaState.injuryReports.join('<br>')}</div>` : '';
+        const deathHtml = (arenaState.deathReports || []).length > 0 ? `<div style="font-size:13px; color:#ef4444; font-weight:900; margin:6px 0;">💀 阵亡: ${arenaState.deathReports.join(', ')}</div>` : '';
+        panel.innerHTML = `<div class="arena-result-title" style="color:#ef4444">战败</div>
+            ${deathHtml}${injHtml}
+            <div style="font-size:12px; color:#22c55e; margin:4px 0;">败者补偿: +${arenaState.prize}g +${arenaState.rp}RP</div>
+            <button class="btn-arena-back" onclick="closeArena()">继续...</button>`;
     }
 }
+
+// 3选1对手生成
+function showOpponentSelection() {
+    const selectedCreatures = arenaState.selectedTeam.map(id => game.inventory.find(c => c.id === id)).filter(Boolean);
+    const playerPower = selectedCreatures.reduce((s, c) => s + calcCreatureStats(c).total, 0);
+    arenaState.playerPower = playerPower;
+    arenaState.opponents = generateArenaOpponents(playerPower, arenaState.mode);
+    arenaState.step = 'select-opponent';
+    renderArenaMenu();
+}
+window.showOpponentSelection = showOpponentSelection;
+
+function chooseOpponent(idx) {
+    const opp = arenaState.opponents[idx];
+    arenaState.chosenDifficulty = opp.difficulty;
+    arenaState.chosenNPCs = opp.npcs;
+    startGridBattle();
+}
+window.chooseOpponent = chooseOpponent;
 
 function resetCooldowns() {
     game.inventory.forEach(c => c.cooldown = false);
@@ -1652,25 +1984,242 @@ function toggleCatalyst() {
 window.toggleCatalyst = toggleCatalyst;
 
 // --- 跳过今天 ---
+// --- 🏭 设施操作面板 ---
+function openFacilityPanel(type) {
+    closeFacilityPanel();
+    const overlay = document.createElement('div');
+    overlay.id = 'facility-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.8);z-index:500;display:flex;align-items:center;justify-content:center;';
+
+    let html = '';
+    if (type === 'blender') {
+        const a = blender.slots[0], b = blender.slots[1];
+        const hasTwo = a && b;
+        const cost = hasTwo ? calcBreedCost(a, b) : 0;
+        const compat = hasTwo ? checkGeneCompatibility(a, b) : { type: 'neutral' };
+        const ageA = a ? getAgeStage(a.age ?? 0) : null;
+        const ageB = b ? getAgeStage(b.age ?? 0) : null;
+
+        const renderSlot = (c) => {
+            if (!c) return '<div style="color:#64748b;font-size:12px;">空</div>';
+            const pal = PALETTES[c.dna[0]];
+            const stats = calcCreatureStats(c);
+            const age = getAgeStage(c.age ?? 0);
+            return `<div style="color:${pal.border};font-weight:900;">${pal.name}</div>
+                <div style="font-size:10px;color:#94a3b8;">${age.icon}${age.name} · ${CHASSIS_ROLE[c.dna[1]]?.role||''} · 战力${stats.total}</div>`;
+        };
+
+        const catalystHtml = (game.catalysts.expr + game.catalysts.mutate > 0) ?
+            `<div style="font-size:11px;margin:8px 0;">
+                🧪 催化剂:
+                ${game.catalysts.expr > 0 ? `<span onclick="setBlenderCatalyst('expr')" style="cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid ${game.useCatalyst==='expr'?'#fbbf24':'#475569'};color:${game.useCatalyst==='expr'?'#fbbf24':'#94a3b8'}">表达×${game.catalysts.expr}</span>` : ''}
+                ${game.catalysts.mutate > 0 ? `<span onclick="setBlenderCatalyst('mutate')" style="cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid ${game.useCatalyst==='mutate'?'#a855f7':'#475569'};color:${game.useCatalyst==='mutate'?'#a855f7':'#94a3b8'}">突变×${game.catalysts.mutate}</span>` : ''}
+                ${game.useCatalyst ? `<span onclick="setBlenderCatalyst(null)" style="cursor:pointer;color:#ef4444;margin-left:4px;">✕</span>` : ''}
+            </div>` : '';
+
+        html = `<div style="background:#1e293b;border:3px solid #fbbf24;border-radius:16px;padding:20px;max-width:400px;width:90%;text-align:center;">
+            <div style="font-size:18px;font-weight:900;color:#fbbf24;margin-bottom:12px;">🔄 DNA搅拌机</div>
+            <div style="display:flex;gap:12px;justify-content:center;margin-bottom:12px;">
+                <div style="flex:1;background:#0f172a;border-radius:8px;padding:10px;border:1px solid #334155;">
+                    <div style="font-size:10px;color:#64748b;margin-bottom:4px;">亲本 A</div>${renderSlot(a)}
+                </div>
+                <div style="font-size:20px;color:#334155;align-self:center;">×</div>
+                <div style="flex:1;background:#0f172a;border-radius:8px;padding:10px;border:1px solid #334155;">
+                    <div style="font-size:10px;color:#64748b;margin-bottom:4px;">亲本 B</div>${renderSlot(b)}
+                </div>
+            </div>
+            ${compat.type !== 'neutral' ? `<div style="font-size:12px;color:${compat.type==='synergy'?'#4ade80':'#ef4444'};margin:6px 0;">${compat.type==='synergy'?'✨':'⚠'} ${compat.n}: ${compat.desc}</div>` : ''}
+            ${hasTwo ? `<div style="font-size:16px;font-weight:900;color:#fbbf24;margin:8px 0;">费用: ${cost}g</div>` : ''}
+            ${catalystHtml}
+            <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
+                ${hasTwo ? `<button onclick="closeFacilityPanel();doBlenderBreed()" style="padding:10px 24px;border-radius:10px;font-size:14px;font-weight:900;cursor:pointer;border:2px solid #fbbf24;background:#78350f;color:#fbbf24;" ${game.coins < cost ? 'disabled' : ''}>🔄 搅拌!</button>` : ''}
+                <button onclick="closeFacilityPanel();ejectBlender()" style="padding:10px 24px;border-radius:10px;font-size:14px;font-weight:900;cursor:pointer;border:2px solid #334155;background:#0f172a;color:#94a3b8;">取出全部</button>
+                <button onclick="closeFacilityPanel()" style="padding:10px 24px;border-radius:10px;font-size:14px;font-weight:900;cursor:pointer;border:2px solid #334155;background:#0f172a;color:#64748b;">关闭</button>
+            </div>
+        </div>`;
+    } else if (type === 'cloner') {
+        // Find creature currently being dragged to cloner (if any), or show general info
+        html = `<div style="background:#1e293b;border:3px solid #22d3ee;border-radius:16px;padding:20px;max-width:350px;width:90%;text-align:center;">
+            <div style="font-size:18px;font-weight:900;color:#22d3ee;margin-bottom:12px;">📋 DNA复制机</div>
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">将小黏兽拖入复制机即可复制。<br>副本有30%概率出现复制失真(缺陷)。</div>
+            <div style="font-size:11px;color:#64748b;">费用 = 10g + 基础价值×2</div>
+            <button onclick="closeFacilityPanel()" style="margin-top:12px;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:900;cursor:pointer;border:2px solid #334155;background:#0f172a;color:#94a3b8;">关闭</button>
+        </div>`;
+    } else if (type === 'healer') {
+        // Show all injured creatures
+        const injured = game.inventory.filter(c => c.injuries && c.injuries.length > 0);
+        const itemsHtml = injured.length > 0 ? injured.map(c => {
+            const pal = PALETTES[c.dna[0]];
+            return c.injuries.map(injId => {
+                const inj = INJURIES.find(i => i.id === injId);
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#0f172a;border-radius:6px;margin:4px 0;">
+                    <span style="font-size:11px;"><span style="color:${pal.border}">${pal.name}</span> - <span style="color:#fca5a5">${inj?.n||injId}</span></span>
+                    <button onclick="doHealFromPanel('${c.id}','${injId}')" style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:900;cursor:pointer;border:1px solid #4ade80;background:#14532d;color:#4ade80;" ${game.coins < HEALER_COST_PER_INJURY ? 'disabled' : ''}>治疗 ${HEALER_COST_PER_INJURY}g</button>
+                </div>`;
+            }).join('');
+        }).join('') : '<div style="font-size:12px;color:#64748b;">目前没有受伤的小黏兽。</div>';
+
+        html = `<div style="background:#1e293b;border:3px solid #4ade80;border-radius:16px;padding:20px;max-width:380px;width:90%;text-align:center;">
+            <div style="font-size:18px;font-weight:900;color:#4ade80;margin-bottom:12px;">💊 DNA治疗仪</div>
+            <div style="text-align:left;">${itemsHtml}</div>
+            <button onclick="closeFacilityPanel()" style="margin-top:12px;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:900;cursor:pointer;border:2px solid #334155;background:#0f172a;color:#94a3b8;">关闭</button>
+        </div>`;
+    }
+
+    overlay.innerHTML = html;
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeFacilityPanel(); });
+    document.body.appendChild(overlay);
+}
+
+function closeFacilityPanel() {
+    const el = document.getElementById('facility-overlay');
+    if (el) el.remove();
+}
+window.closeFacilityPanel = closeFacilityPanel;
+window.openFacilityPanel = openFacilityPanel;
+window.setBlenderCatalyst = function(type) { game.useCatalyst = type; openFacilityPanel('blender'); };
+
+function doHealFromPanel(creatureId, injuryId) {
+    const creature = game.inventory.find(c => c.id === Number(creatureId));
+    if (!creature) return;
+    if (healInjury(creature, injuryId)) {
+        const inj = INJURIES.find(i => i.id === injuryId);
+        showToast(`治疗成功: ${inj?.n||injuryId}`);
+        openFacilityPanel('healer'); // refresh
+        renderHUD();
+        if (selectedCreatureId === creature.id) renderCreaturePanel();
+    } else {
+        showToast(`金币不足! 需要 ${HEALER_COST_PER_INJURY}g`);
+    }
+}
+window.doHealFromPanel = doHealFromPanel;
+
 function doSkipDay() {
     if (game.phase !== 'idle') return;
-    const deaths = skipDay();
-    if (deaths.length > 0) {
-        const names = deaths.map(d => PALETTES[d.dna[0]].name).join(', ');
-        showToast(`寿终正寝: ${names}`);
-    }
-    // 走私贩出现检查
-    if (game.smuggler.daysSinceVisit >= SMUGGLER_MIN_INTERVAL && Math.random() < SMUGGLER_VISIT_CHANCE) {
-        game.smuggler.active = true;
-        game.smuggler.creatures = generateSmugglerStock();
-        game.smuggler.daysSinceVisit = 0;
-        showToast('走私贩来了!');
-    }
+    game.phase = 'dayTransition';
+
+    // 暗场过渡
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#0f172a;z-index:800;opacity:0;transition:opacity 0.4s;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#f8fafc;font-weight:900;';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.style.opacity = '1');
+
+    setTimeout(() => {
+        const deaths = skipDay();
+
+        // 构建日报
+        let report = `<div style="font-size:22px;margin-bottom:16px;">☀ 第 ${game.dayCount} 天</div>`;
+        // 成长变化
+        const changes = [];
+        for (const c of game.inventory) {
+            const age = getAgeStage(c.age ?? 0);
+            const prevAge = getAgeStage((c.age ?? 1) - 1);
+            if (prevAge.name !== age.name) {
+                changes.push(`${PALETTES[c.dna[0]].name}: ${prevAge.icon}${prevAge.name} → ${age.icon}${age.name}`);
+            }
+        }
+        if (changes.length > 0) report += `<div style="font-size:13px;color:#94a3b8;margin-bottom:8px;">${changes.join('<br>')}</div>`;
+        if (deaths.length > 0) report += `<div style="font-size:13px;color:#ef4444;">💀 寿终: ${deaths.map(d => PALETTES[d.dna[0]].name).join(', ')}</div>`;
+        if (changes.length === 0 && deaths.length === 0) report += `<div style="font-size:13px;color:#64748b;">一切如常。</div>`;
+
+        // 走私贩
+        let smugglerArrived = false;
+        if (game.smuggler.daysSinceVisit >= SMUGGLER_MIN_INTERVAL && Math.random() < SMUGGLER_VISIT_CHANCE) {
+            game.smuggler.active = true;
+            game.smuggler.creatures = generateSmugglerStock();
+            game.smuggler.daysSinceVisit = 0;
+            smugglerArrived = true;
+            report += `<div style="font-size:14px;color:#fbbf24;margin-top:8px;">🕵️ 走私贩来了!</div>`;
+        }
+
+        overlay.innerHTML = report + `<button onclick="this.parentElement.remove(); finishSkipDay(${smugglerArrived})" style="margin-top:16px;padding:10px 30px;border-radius:12px;font-size:14px;font-weight:900;cursor:pointer;border:2px solid #334155;background:#1e293b;color:#f8fafc;">继续</button>`;
+    }, 500);
+}
+window.doSkipDay = doSkipDay;
+
+function finishSkipDay(showSmuggler) {
+    game.phase = 'idle';
     refreshDisplayCreatures();
     if (selectedCreatureId) renderCreaturePanel();
     renderHUD();
+    if (showSmuggler) openSmugglerShop();
 }
-window.doSkipDay = doSkipDay;
+window.finishSkipDay = finishSkipDay;
+
+// --- 🕵️ 走私贩商店 ---
+let smugglerModel = null;
+
+function spawnSmugglerModel() {
+    if (smugglerModel) return;
+    smugglerModel = new THREE.Group();
+    // 简单的商人: 紫色立方体 + 帽子
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.6, 0.3), new THREE.MeshStandardMaterial({ color: 0x6d28d9 }));
+    body.position.y = 0.4; smugglerModel.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), new THREE.MeshStandardMaterial({ color: 0xfde68a }));
+    head.position.y = 0.85; smugglerModel.add(head);
+    const hat = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.3, 8), new THREE.MeshStandardMaterial({ color: 0x4c1d95 }));
+    hat.position.y = 1.1; smugglerModel.add(hat);
+    // 问号标识
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.03, 8, 24), new THREE.MeshBasicMaterial({ color: 0xa855f7, transparent: true, opacity: 0.6 }));
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; smugglerModel.add(ring);
+    smugglerModel.position.set(0, 0, PLATFORM_RADIUS - 0.5);
+    _scene.add(smugglerModel);
+}
+
+function removeSmugglerModel() {
+    if (smugglerModel) { _scene.remove(smugglerModel); smugglerModel = null; }
+}
+
+function openSmugglerShop() {
+    if (!game.smuggler.active || !game.smuggler.creatures.length) return;
+    spawnSmugglerModel();
+    const overlay = document.createElement('div');
+    overlay.id = 'smuggler-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.85);z-index:600;display:flex;align-items:center;justify-content:center;';
+    let itemsHtml = game.smuggler.creatures.map((item, i) => {
+        const c = item.creature;
+        const pal = PALETTES[c.dna[0]];
+        const stats = calcCreatureStats(c);
+        const age = getAgeStage(c.age ?? 0);
+        return `<div style="background:#1e293b;border:2px solid #334155;border-radius:14px;padding:16px;min-width:200px;text-align:center;">
+            <div style="font-size:16px;font-weight:900;color:${pal.border}">${pal.name}</div>
+            <div style="font-size:11px;color:#94a3b8;margin:4px 0;">${CHASSIS_ROLE[c.dna[1]]?.role || ''} · ${age.icon}${age.name} · 战力${stats.total}</div>
+            <div style="font-size:11px;color:#64748b;margin:4px 0;">稀有度: ${RARITY_LABELS[item.rarity]}</div>
+            <div style="font-size:18px;font-weight:900;color:#fbbf24;margin:8px 0;">${item.price}g</div>
+            <button onclick="buyFromSmuggler(${i})" style="padding:8px 20px;border-radius:8px;font-size:13px;font-weight:900;cursor:pointer;border:2px solid #a855f7;background:#4c1d95;color:#e9d5ff;" ${game.coins < item.price || game.inventory.length >= 8 ? 'disabled' : ''}>购买</button>
+        </div>`;
+    }).join('');
+    overlay.innerHTML = `<div style="text-align:center;">
+        <div style="font-size:22px;font-weight:900;color:#e9d5ff;margin-bottom:16px;">🕵️ 走私贩</div>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:16px;">"嘘...看看我今天带了什么好货。"</div>
+        <div style="display:flex;gap:16px;justify-content:center;margin-bottom:16px;">${itemsHtml}</div>
+        <button onclick="closeSmugglerShop()" style="padding:10px 24px;border-radius:10px;font-size:13px;font-weight:900;cursor:pointer;border:2px solid #334155;background:#0f172a;color:#94a3b8;">离开</button>
+    </div>`;
+    document.body.appendChild(overlay);
+}
+
+function buyFromSmuggler(idx) {
+    const item = game.smuggler.creatures[idx];
+    if (!item || game.coins < item.price || game.inventory.length >= 8) return;
+    game.coins -= item.price;
+    game.inventory.push(item.creature);
+    game.smuggler.creatures.splice(idx, 1);
+    closeSmugglerShop();
+    if (game.smuggler.creatures.length > 0) openSmugglerShop();
+    else { game.smuggler.active = false; removeSmugglerModel(); }
+    refreshDisplayCreatures();
+    renderHUD();
+    showToast(`购入: ${PALETTES[item.creature.dna[0]].name}`);
+}
+window.buyFromSmuggler = buyFromSmuggler;
+
+function closeSmugglerShop() {
+    const el = document.getElementById('smuggler-overlay');
+    if (el) el.remove();
+    if (!game.smuggler.creatures.length) { game.smuggler.active = false; removeSmugglerModel(); }
+}
+window.closeSmugglerShop = closeSmugglerShop;
+window.openSmugglerShop = openSmugglerShop;
 
 // --- 打扫卫生 (保底) ---
 function doCleaningJob() {
@@ -1719,9 +2268,9 @@ function animate() {
     requestAnimationFrame(animate);
     const dt = clock.getDelta();
     updateWandering(dt);
-    updateCameraAnim();
     updateBlenderVisuals();
     updateBlenderLabel();
+    updateFacilityLabels();
     // 平台发光环旋转
     ringMesh.rotation.z = clock.getElapsedTime() * 0.3;
     _controls.update(); _renderer.render(_scene, _camera);

@@ -2,7 +2,7 @@
 // 数学工具函数 — 纯函数，无副作用
 // =====================================================================
 
-import { currentDNA } from './state.mjs';
+import { currentDNA } from './state.mjs'; // same directory
 
 export function smoothStep(e0, e1, x) {
     let t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));

@@ -2,7 +2,7 @@
 // 🎮 游戏逻辑 — 战斗记忆遗传 + 6岁寿命 + 三台设施 + 走私贩 + 3选1竞技场
 // =====================================================================
 
-import { PALETTES, HEAD_TENSORS, SIDE_TENSORS, BACK_TENSORS, BODY_SHAPES, BASES, PATTERNS } from './dna-constants.mjs';
+import { PALETTES, HEAD_TENSORS, SIDE_TENSORS, BACK_TENSORS, BODY_SHAPES, BASES, PATTERNS } from '../data/dna-constants.mjs';
 import {
     COMMON_GENES, FINE_GENES, RARE_GENES, LEGENDARY_GENES, RARITY_ORDER,
     getGeneRarity, getRarityIndex, getExprTier, rollExprForRarity,
@@ -14,8 +14,8 @@ import {
     HEALER_COST_PER_INJURY, SMUGGLER_PRICES,
     FAILSAFE_CLEAN_REWARD,
     getAgeStage
-} from './game-constants.mjs';
-import { game, bumpCreatureId } from './state.mjs';
+} from '../data/game-constants.mjs';
+import { game, bumpCreatureId } from '../core/state.mjs';
 
 // --- 特性名称 ---
 export function getTraitName(idx, code) {
@@ -499,11 +499,11 @@ export function detectSynergies(team) {
 // 🏟️ 3选1对手生成
 // =====================================================================
 
-export function generateArenaOpponents(playerPower) {
+export function generateArenaOpponents(playerPower, teamSize) {
     return ARENA_DIFFICULTY.map(diff => {
         const [lo, hi] = diff.powerMult;
         const targetPower = playerPower * (lo + Math.random() * (hi - lo));
-        const count = Math.max(1, Math.min(3, Math.round(targetPower / 30)));
+        const count = teamSize; // match player's team size (1v1/3v3/5v5)
         const npcs = [];
         for (let i = 0; i < count; i++) npcs.push(generateNPC(targetPower / count));
         const totalStat = npcs.reduce((s, n) => s + calcCreatureStats(n).total, 0);

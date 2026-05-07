@@ -3,10 +3,10 @@
 // =====================================================================
 
 import * as THREE from 'three';
-import { currentDNA, currentExpression, isWireframeMode, scene, currentGroup, floatWrapper, setCurrentGroup, setFloatWrapper, setExportableModel } from './state.mjs';
-import { BASES, HEAD_TENSORS, HEAD_CONTRACTS, HEAD_PRIMITIVES, SIDE_PRIMITIVES, SIDE_TENSORS, BACK_TENSORS, DORSAL_PRIMITIVES, CATFISH_BARBEL_FIELDS, BODY_SHAPES, PALETTES, PATTERNS } from './dna-constants.mjs';
-import { smoothStep, hashString, seededRandom, dnaSignature, addVec, ellipsoidField } from './math-utils.mjs';
-import { getExprTier } from './game-constants.mjs';
+import { currentDNA, currentExpression, isWireframeMode, scene, currentGroup, floatWrapper, setCurrentGroup, setFloatWrapper, setExportableModel } from '../core/state.mjs';
+import { BASES, HEAD_TENSORS, HEAD_CONTRACTS, HEAD_PRIMITIVES, SIDE_PRIMITIVES, SIDE_TENSORS, BACK_TENSORS, DORSAL_PRIMITIVES, CATFISH_BARBEL_FIELDS, BODY_SHAPES, PALETTES, PATTERNS } from '../data/dna-constants.mjs';
+import { smoothStep, hashString, seededRandom, dnaSignature, addVec, ellipsoidField } from '../core/math-utils.mjs';
+import { getExprTier } from '../data/game-constants.mjs';
 
 // --- 体型蓝图 ---
 
