@@ -45,6 +45,7 @@ export const game = {
     useCatalyst: null,
     research: {},                // { gene_lock: true, ... }
     ancestors: [],               // retired creatures
+    codex: new Set(),            // 形态图鉴: 记录发现的元素种类
     // 走私贩
     smuggler: {
         active: false,

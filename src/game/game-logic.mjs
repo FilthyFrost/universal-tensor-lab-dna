@@ -352,8 +352,9 @@ function inheritMutations(parentA, parentB) {
         if (mutA && Math.random() < 0.15) result[part] = mutA;
         else if (mutB && Math.random() < 0.15) result[part] = mutB;
     }
+    // 自然新突变 — 15%基础(从5%提高), 每部位独立roll
     for (const part of parts) {
-        if (!result[part] && Math.random() < 0.05) {
+        if (!result[part] && Math.random() < 0.15) {
             const pool = MUTATIONS[part];
             if (pool) result[part] = pool[Math.floor(Math.random() * pool.length)];
         }
@@ -795,6 +796,15 @@ export function npcChooseSkill(skills, nHP, nMaxHP, pHP, pBuffs, mana) {
     const attacks = available.filter(s => s.type === 'attack' || s.type === 'multi' || s.type === 'drain');
     if (attacks.length && Math.random() < 0.7) return attacks[Math.floor(Math.random() * attacks.length)];
     return available[Math.floor(Math.random() * available.length)];
+}
+
+// --- 图鉴发现 ---
+export function checkCodexDiscovery(creature) {
+    const key = creature.dna[0]; // 元素种类 (16种)
+    if (game.codex.has(key)) return null;
+    game.codex.add(key);
+    game.coins += 5; // 发现奖励
+    return key;
 }
 
 // re-exports

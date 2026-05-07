@@ -249,8 +249,9 @@ function breed(pa, pb, catalyst) {
     const maxDef = Math.max(age(pa.age).defect||0, age(pb.age).defect||0);
     if (maxDef > 0 && Math.random() < maxDef) child.defects.push('defect');
     // 突变 — 经验越高突变概率越高(探索奖励)
+    // 扩大突变池: 基础15% + 经验加成, 上限40%
     const exp = calcExperience(pa.mem, pb.mem, pa, pb);
-    if (Math.random() < 0.05 + stimCurve(exp) * 0.10) child.dna.mutated = true;
+    if (Math.random() < 0.15 + stimCurve(exp) * 0.15) child.dna.mutated = true;
     return child;
 }
 
@@ -398,6 +399,7 @@ const PLAYERS = {
 // ============================================================
 function run(pt) {
     globalBreedPressure = 0;
+    const codex = new Set(); // 形态图鉴: 记录发现的DNA组合
     const s = { day:0, coins:120, inv:[], breeds:0, smugDays:0, catalysts:0 };
     // 初始: 2只壮年(含1个fine CA) + 1只少年
     s.inv.push(mkCreature(['TA','TT','CT','AA','AA','AA'], 3));
@@ -423,13 +425,23 @@ function run(pt) {
                         const child = breed(a, b, cat);
                         s.inv.push(child);
                         s.breeds++;
-                        if (improved(child, a, b)) {
-                            log.excite += 10; log.consNP = 0;
-                            globalBreedPressure = 0; // 成功→压力释放
+                        // 图鉴发现检查 — 元素种类 (16种)
+                    // 发现新元素 = 小惊喜, 但不是每次都有
+                    const formKey = child.dna[0];
+                    const isNewForm = !codex.has(formKey);
+                    if (isNewForm) { codex.add(formKey); s.coins += 5; }
+
+                    // 新突变也算惊喜
+                    const hasMutation = child.dna.mutated;
+
+                    if (improved(child, a, b) || isNewForm || hasMutation) {
+                            log.excite += isNewForm ? 12 : hasMutation ? 8 : 10;
+                            log.consNP = 0;
+                            globalBreedPressure = 0;
                         } else {
                             log.frust += 5; log.consNP++;
                             log.maxNP = Math.max(log.maxNP, log.consNP);
-                            globalBreedPressure++; // 失败→压力积累
+                            globalBreedPressure++;
                         }
                     }
                 }
