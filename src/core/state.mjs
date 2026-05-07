@@ -46,6 +46,11 @@ export const game = {
     research: {},                // { gene_lock: true, ... }
     ancestors: [],               // retired creatures
     codex: new Set(),            // 形态图鉴: 记录发现的元素种类
+    // 岛屿系统
+    currentIsland: 'lab',        // 'wild' | 'lab' | 'arena'
+    wildCreatures: [],           // 野外岛的野生怪列表
+    wildEnvironment: 'grassland', // 当前野外环境
+    captureLevel: 0,             // 捕捉器等级 (0=基础50%, 1=65%, 2=80%, 3=90%)
     // 走私贩
     smuggler: {
         active: false,

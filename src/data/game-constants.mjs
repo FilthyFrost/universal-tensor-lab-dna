@@ -249,6 +249,25 @@ export const SMUGGLER_PRICES = { fine: [30, 50], rare: [80, 120], legendary: [20
 export const FAILSAFE_CLEAN_REWARD = 5;
 
 // =====================================================================
+// 🌿 野外捕捉系统
+// =====================================================================
+
+export const WILD_ENVIRONMENTS = [
+    { id: 'grassland', name: '草原', icon: '🌿', elements: ['AA','AT','AC','AG','TA','TT'], maxRarity: 'fine', unlockCost: 0 },
+    { id: 'volcano',   name: '火山', icon: '🌋', elements: ['AC','AG','CA','CT'],            maxRarity: 'rare', unlockCost: 200 },
+    { id: 'deepsea',   name: '深海', icon: '🌊', elements: ['TA','TT','TC','TG'],            maxRarity: 'rare', unlockCost: 500 },
+    { id: 'void',      name: '虚空', icon: '🌌', elements: ['GG','CG','GA','GC'],            maxRarity: 'legendary', unlockCost: 1000 },
+];
+
+export const CAPTURE_COSTS = { common: 5, fine: 15, rare: 40, legendary: 100 };
+export const CAPTURE_RATES = [0.50, 0.65, 0.80, 0.90]; // 按captureLevel索引
+export const WILD_SPAWN_COUNT = [2, 4]; // min, max
+
+// 岛屿列表
+export const ISLAND_LIST = ['wild', 'lab', 'arena'];
+export const ISLAND_NAMES = { wild: '🌿 野外', lab: '🧪 实验室', arena: '⚔️ 竞技场' };
+
+// =====================================================================
 // 🔬 研究树
 // =====================================================================
 

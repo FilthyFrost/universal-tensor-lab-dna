@@ -28,10 +28,14 @@
                 <div class="hud-item hud-rp">🔬<span id="rp-amount">0</span></div>
                 <div class="hud-item hud-catalyst">🧪<span id="catalyst-count">0</span></div>
                 <div class="hud-item hud-coin"><span id="coin-amount">120</span>g</div>
-                <button class="btn-buy-wild" id="btn-buy-wild" onclick="doBuyWild()">+ 野生 8g</button>
                 <button class="btn-buy-wild" id="btn-skip-day" onclick="doSkipDay()">⏭ 跳过今天</button>
             </div>
         </div>
+
+        <!-- 岛屿导航 -->
+        <div id="island-nav-left" class="island-nav" onclick="switchIsland('prev')">◀</div>
+        <div id="island-nav-right" class="island-nav" onclick="switchIsland('next')">▶</div>
+        <div id="island-name">🧪 实验室</div>
 
         <!-- 左侧纸质属性面板 -->
         <div id="creature-panel" class="hidden">
@@ -75,6 +79,6 @@
         <div class="upgrade-panel" id="upgrade-panel-content"></div>
     </div>
 
-    <script type="module" src="src/main.mjs?v=10"></script>
+    <script type="module" src="src/main.mjs?v=14"></script>
 </body>
 </html>

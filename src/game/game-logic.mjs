@@ -807,5 +807,44 @@ export function checkCodexDiscovery(creature) {
     return key;
 }
 
+// =====================================================================
+// 🌿 野外捕捉系统
+// =====================================================================
+
+import { WILD_ENVIRONMENTS, CAPTURE_COSTS, CAPTURE_RATES, WILD_SPAWN_COUNT } from '../data/game-constants.mjs';
+
+export function generateWildCreatures(environmentId) {
+    const env = WILD_ENVIRONMENTS.find(e => e.id === environmentId) || WILD_ENVIRONMENTS[0];
+    const count = WILD_SPAWN_COUNT[0] + Math.floor(Math.random() * (WILD_SPAWN_COUNT[1] - WILD_SPAWN_COUNT[0] + 1));
+    const creatures = [];
+    for (let i = 0; i < count; i++) {
+        const dna = [];
+        // 元素基因从环境的元素池中选
+        dna.push(env.elements[Math.floor(Math.random() * env.elements.length)]);
+        // 其余5个基因: 多数common, 少量环境上限
+        for (let j = 1; j < 6; j++) {
+            const rarityRoll = Math.random();
+            if (env.maxRarity === 'legendary' && rarityRoll < 0.03) dna.push(randomGeneOfRarity('legendary'));
+            else if ((env.maxRarity === 'rare' || env.maxRarity === 'legendary') && rarityRoll < 0.12) dna.push(randomGeneOfRarity('rare'));
+            else if (rarityRoll < 0.25) dna.push(randomGeneOfRarity('fine'));
+            else dna.push(randomGeneOfRarity('common'));
+        }
+        const creature = createCreature(dna, null, 2 + Math.floor(Math.random() * 2)); // 青年~壮年
+        creature.isWild = true;
+        creatures.push(creature);
+    }
+    return creatures;
+}
+
+export function attemptCapture(creature, captureLevel) {
+    const rate = CAPTURE_RATES[Math.min(captureLevel, CAPTURE_RATES.length - 1)];
+    const rarityPenalty = { common: 0, fine: 0.1, rare: 0.2, legendary: 0.35 };
+    const creatureRarity = getHighestRarity(creature.dna);
+    const finalRate = Math.max(0.1, rate - (rarityPenalty[creatureRarity] || 0));
+    const success = Math.random() < finalRate;
+    const cost = CAPTURE_COSTS[creatureRarity] || CAPTURE_COSTS.common;
+    return { success, cost, rate: finalRate };
+}
+
 // re-exports
 export { STAT_NAMES_7 as STAT_NAMES };

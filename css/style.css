@@ -205,6 +205,40 @@
         .deploy-slot.placed { border-color: #22c55e; opacity: 0.5; }
         .deploy-slot.selected { border-color: #fbbf24; box-shadow: 0 0 10px rgba(251,191,36,0.3); }
 
+        /* === 岛屿导航 === */
+        .island-nav {
+            position: absolute; top: 50%; z-index: 25; cursor: pointer;
+            font-size: 28px; font-weight: 900; color: rgba(248,250,252,0.4);
+            background: rgba(15,23,42,0.5); backdrop-filter: blur(4px);
+            width: 44px; height: 80px; display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; transition: all 0.15s; user-select: none;
+            transform: translateY(-50%);
+        }
+        .island-nav:hover { color: #f8fafc; background: rgba(15,23,42,0.8); }
+        #island-nav-left { left: 8px; }
+        #island-nav-right { right: 8px; }
+        #island-name {
+            position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+            z-index: 25; font-size: 16px; font-weight: 900; color: #94a3b8;
+            background: rgba(15,23,42,0.7); backdrop-filter: blur(6px);
+            padding: 6px 20px; border-radius: 20px; pointer-events: none;
+            border: 1px solid rgba(51,65,85,0.5);
+        }
+
+        /* 场景过渡 */
+        .island-transition { animation: islandFade 0.3s ease; }
+        @keyframes islandFade { 0% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        /* 捕捉网 */
+        .capture-ring {
+            position: absolute; pointer-events: none; z-index: 20;
+            border: 3px dashed #4ade80; border-radius: 50%;
+            width: 120px; height: 120px; transform: translate(-50%, -50%);
+            opacity: 0; transition: opacity 0.15s;
+        }
+        .capture-ring.active { opacity: 0.7; }
+        .capture-ring.hit { border-color: #fbbf24; border-style: solid; }
+
         /* Toast */
         .death-toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #f8fafc; padding: 12px 24px; border-radius: 16px; font-size: 14px; font-weight: 900; z-index: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
         .death-toast.show { opacity: 1; }

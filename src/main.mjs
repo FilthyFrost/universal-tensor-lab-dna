@@ -22,7 +22,8 @@ import {
     ARENA_DIFFICULTY, INJURY_TIERS,
     HEALER_COST_PER_INJURY, FAILSAFE_CLEAN_REWARD,
     SMUGGLER_VISIT_CHANCE, SMUGGLER_MIN_INTERVAL,
-    RESEARCH_TREE, WAVE_TIERS, getAgeStage
+    RESEARCH_TREE, WAVE_TIERS, getAgeStage,
+    WILD_ENVIRONMENTS, CAPTURE_COSTS, CAPTURE_RATES, ISLAND_LIST, ISLAND_NAMES
 } from './data/game-constants.mjs';
 import { buildCreature } from './creature/creature-builder.mjs';
 import {
@@ -34,6 +35,7 @@ import {
     rollInjury, rollInjuryTier, detectSynergies,
     cloneCreature, getCloneCost, healInjury,
     skipDay, generateSmugglerStock,
+    generateWildCreatures, attemptCapture,
     STAT_NAMES
 } from './game/game-logic.mjs';
 
@@ -69,19 +71,246 @@ _scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 
 setSceneGlobals(_scene, _camera, _renderer, _controls);
 
+// =====================================================================
+// 🏝️ 岛屿管理系统
+// =====================================================================
+
+// WILD_ENVIRONMENTS, CAPTURE_COSTS, CAPTURE_RATES, ISLAND_LIST, ISLAND_NAMES
+// imported at top of file; generateWildCreatures, attemptCapture also imported at top
+
+const labGroup = new THREE.Group();     // 实验室岛所有3D元素
+const wildGroup = new THREE.Group();    // 野外岛所有3D元素
+const arenaIslandGroup = new THREE.Group(); // 竞技场岛(占位)
+
+const islandGroups = { lab: labGroup, wild: wildGroup, arena: arenaIslandGroup };
+_scene.add(labGroup); // 初始显示实验室
+
+function switchIsland(direction) {
+    if (game.phase !== 'idle') return;
+    const list = ISLAND_LIST;
+    const curIdx = list.indexOf(game.currentIsland);
+    let newIdx;
+    if (direction === 'prev') newIdx = (curIdx - 1 + list.length) % list.length;
+    else newIdx = (curIdx + 1) % list.length;
+    const newIsland = list[newIdx];
+
+    // 隐藏当前岛
+    _scene.remove(islandGroups[game.currentIsland]);
+
+    // 显示新岛
+    _scene.add(islandGroups[newIsland]);
+    game.currentIsland = newIsland;
+
+    // 更新UI
+    const nameEl = document.getElementById('island-name');
+    if (nameEl) nameEl.textContent = ISLAND_NAMES[newIsland] || newIsland;
+
+    // 清除选择状态
+    deselectCreature();
+    isDragging = false;
+    dragState = null;
+
+    // 岛屿特定初始化
+    if (newIsland === 'wild') initWildIsland();
+    if (newIsland === 'arena') openArena(null); // 打开竞技场UI
+
+    // 过渡动画
+    const canvas = document.getElementById('canvas-container');
+    canvas.classList.remove('island-transition');
+    void canvas.offsetWidth;
+    canvas.classList.add('island-transition');
+
+    renderHUD();
+}
+window.switchIsland = switchIsland;
+
+// --- 野外岛 ---
+
+const wildDisplayEntities = new Map();
+let wildInitialized = false;
+let captureMode = false;
+let captureRingEl = null;
+
+function initWildIsland() {
+    if (!wildInitialized) {
+        // 草地平台
+        const grassGeo = new THREE.CylinderGeometry(5, 5.3, 0.15, 48);
+        const grassMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.8 });
+        const grass = new THREE.Mesh(grassGeo, grassMat);
+        grass.position.y = -0.08; grass.receiveShadow = true;
+        wildGroup.add(grass);
+
+        // 装饰石头
+        for (let i = 0; i < 5; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const r = 2 + Math.random() * 2.5;
+            const rock = new THREE.Mesh(
+                new THREE.SphereGeometry(0.15 + Math.random() * 0.2, 6, 5),
+                new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.9 })
+            );
+            rock.position.set(Math.cos(angle) * r, 0.05, Math.sin(angle) * r);
+            rock.scale.y = 0.5 + Math.random() * 0.3;
+            wildGroup.add(rock);
+        }
+
+        // 发光边缘
+        const ringGeo = new THREE.TorusGeometry(5.15, 0.03, 8, 64);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0.4 });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = -Math.PI / 2; ring.position.y = 0.01;
+        wildGroup.add(ring);
+
+        // 捕捉网HTML元素
+        captureRingEl = document.createElement('div');
+        captureRingEl.className = 'capture-ring';
+        document.getElementById('game-container').appendChild(captureRingEl);
+
+        wildInitialized = true;
+    }
+
+    // 刷新野生怪
+    refreshWildCreatures();
+}
+
+function refreshWildCreatures() {
+    // 清除旧的
+    for (const [, entity] of wildDisplayEntities) {
+        if (entity.group) wildGroup.remove(entity.group);
+    }
+    wildDisplayEntities.clear();
+
+    // 生成新的
+    game.wildCreatures = generateWildCreatures(game.wildEnvironment);
+    for (const creature of game.wildCreatures) {
+        const group = buildCreatureForDisplay(creature);
+        if (group) {
+            const angle = Math.random() * Math.PI * 2;
+            const r = 1 + Math.random() * 3;
+            group.position.set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+            wildGroup.add(group);
+            wildDisplayEntities.set(creature.id, {
+                group, creature,
+                targetPos: new THREE.Vector3((Math.random()-0.5)*6, 0, (Math.random()-0.5)*6),
+                speed: 0.004 + Math.random() * 0.006
+            });
+        }
+    }
+}
+
+function updateWildWandering() {
+    if (game.currentIsland !== 'wild') return;
+    for (const [, entity] of wildDisplayEntities) {
+        const { group, targetPos, speed } = entity;
+        if (!group.parent) continue;
+        const dx = targetPos.x - group.position.x;
+        const dz = targetPos.z - group.position.z;
+        const dist = Math.sqrt(dx*dx + dz*dz);
+        if (dist < 0.3) {
+            entity.targetPos = new THREE.Vector3((Math.random()-0.5)*7, 0, (Math.random()-0.5)*7);
+        } else {
+            group.position.x += (dx/dist) * speed;
+            group.position.z += (dz/dist) * speed;
+            group.rotation.y += (Math.atan2(dx, dz) - group.rotation.y) * 0.05;
+        }
+        // 保持在范围内
+        const fromCenter = Math.sqrt(group.position.x**2 + group.position.z**2);
+        if (fromCenter > 4.5) {
+            group.position.x *= 4/fromCenter;
+            group.position.z *= 4/fromCenter;
+            entity.targetPos = new THREE.Vector3(0, 0, 0);
+        }
+        const t = Date.now() * 0.001 + entity.creature.id;
+        const bs = group.userData.baseScale || 0.35;
+        group.scale.setScalar(bs + Math.sin(t*2.5)*0.008);
+    }
+}
+
+// 野外岛鼠标事件 — 捕捉网
+function onWildMouseDown(e) {
+    if (game.currentIsland !== 'wild' || game.phase !== 'idle') return;
+    captureMode = true;
+    if (captureRingEl) captureRingEl.classList.add('active');
+}
+
+function onWildMouseMove(e) {
+    if (!captureMode || !captureRingEl) return;
+    captureRingEl.style.left = e.clientX + 'px';
+    captureRingEl.style.top = e.clientY + 'px';
+
+    // 检测范围内是否有野生怪
+    const rect = _renderer.domElement.getBoundingClientRect();
+    mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(mouse, _camera);
+    let hasTarget = false;
+    for (const [, entity] of wildDisplayEntities) {
+        if (!entity.group.parent) continue;
+        const hits = raycaster.intersectObject(entity.group, true);
+        if (hits.length > 0) { hasTarget = true; break; }
+    }
+    captureRingEl.classList.toggle('hit', hasTarget);
+}
+
+function onWildMouseUp(e) {
+    if (!captureMode) return;
+    captureMode = false;
+    if (captureRingEl) { captureRingEl.classList.remove('active'); captureRingEl.classList.remove('hit'); }
+
+    if (game.currentIsland !== 'wild') return;
+
+    // 检测点击了哪只野生怪
+    const rect = _renderer.domElement.getBoundingClientRect();
+    mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(mouse, _camera);
+
+    for (const [id, entity] of wildDisplayEntities) {
+        if (!entity.group.parent) continue;
+        const hits = raycaster.intersectObject(entity.group, true);
+        if (hits.length > 0) {
+            const result = attemptCapture(entity.creature, game.captureLevel);
+            if (result.success) {
+                // 成功捕获
+                if (game.coins >= result.cost && game.inventory.length < 8) {
+                    game.coins -= result.cost;
+                    entity.creature.isWild = false;
+                    game.inventory.push(entity.creature);
+                    wildGroup.remove(entity.group);
+                    wildDisplayEntities.delete(id);
+                    showToast(`捕获成功! -${result.cost}g`);
+                    renderHUD();
+                } else if (game.coins < result.cost) {
+                    showToast(`金币不足! 需要${result.cost}g`);
+                } else {
+                    showToast('库存已满!');
+                }
+            } else {
+                // 失败 — 怪跑开
+                showToast(`捕获失败! (${Math.round(result.rate*100)}%概率)`);
+                entity.targetPos = new THREE.Vector3((Math.random()-0.5)*8, 0, (Math.random()-0.5)*8);
+                entity.speed = 0.02; // 快速逃跑
+                setTimeout(() => { entity.speed = 0.005; }, 1000);
+            }
+            return;
+        }
+    }
+}
+
+// 注册野外岛事件（在主事件处理器中调用）
+
 // --- 实验室平台 ---
 const PLATFORM_RADIUS = 5;
 const platformGeo = new THREE.CylinderGeometry(PLATFORM_RADIUS, PLATFORM_RADIUS + 0.3, 0.15, 48);
 const platformMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.8 });
 const platform = new THREE.Mesh(platformGeo, platformMat);
 platform.position.y = -0.08; platform.receiveShadow = true;
-_scene.add(platform);
+labGroup.add(platform);
 // 发光边缘环
 const ringGeo = new THREE.TorusGeometry(PLATFORM_RADIUS + 0.15, 0.04, 8, 64);
 const ringMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.6 });
 const ringMesh = new THREE.Mesh(ringGeo, ringMat);
 ringMesh.rotation.x = -Math.PI / 2; ringMesh.position.y = 0.01;
-_scene.add(ringMesh);
+labGroup.add(ringMesh);
 
 // --- 基因搅拌机 3D ---
 const blender = {
@@ -129,7 +358,7 @@ const blender = {
     gRing.rotation.x = -Math.PI / 2; gRing.position.y = 0.02;
     blender.glowRing = gRing;
     g.add(gRing);
-    _scene.add(g);
+    labGroup.add(g);
 })();
 
 // 搅拌机内的迷你生物球
@@ -424,7 +653,7 @@ let clonerGroup = new THREE.Group();
     );
     ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02;
     clonerGroup.add(ring);
-    _scene.add(clonerGroup);
+    labGroup.add(clonerGroup);
 })();
 
 // --- 💊 治疗仪 3D (平台右侧) ---
@@ -457,7 +686,7 @@ let healerGroup = new THREE.Group();
     );
     ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02;
     healerGroup.add(ring);
-    _scene.add(healerGroup);
+    labGroup.add(healerGroup);
 })();
 
 // 相机初始位置 — 俯视全景
@@ -525,7 +754,7 @@ function refreshDisplayCreatures() {
     // Remove groups for creatures no longer in inventory
     for (const [id, entity] of displayEntities) {
         if (!game.inventory.find(c => c.id === id)) {
-            _scene.remove(entity.group);
+            labGroup.remove(entity.group);
             entity.group.traverse(c => { if (c.isMesh) { c.geometry?.dispose(); c.material?.dispose(); } });
             displayEntities.delete(id);
         }
@@ -537,7 +766,7 @@ function refreshDisplayCreatures() {
             if (group) {
                 const pos = randomPlatformPos();
                 group.position.copy(pos);
-                _scene.add(group);
+                labGroup.add(group);
                 displayEntities.set(creature.id, {
                     group, creature,
                     targetPos: randomPlatformPos(),
@@ -672,6 +901,9 @@ function getHitCreatureId(event) {
 
 _renderer.domElement.addEventListener('mousedown', (e) => {
     if (game.phase !== 'idle') return;
+    // 野外岛: 启动捕捉网
+    if (game.currentIsland === 'wild') { onWildMouseDown(e); return; }
+    if (game.currentIsland !== 'lab') return; // 只在实验室处理拖拽
     mouseDownTime = Date.now();
     mouseDownId = getHitCreatureId(e);
     mouseMoved = false;
@@ -683,7 +915,8 @@ _renderer.domElement.addEventListener('mousedown', (e) => {
 });
 
 _renderer.domElement.addEventListener('mousemove', (e) => {
-    if (!mouseDownId || game.phase !== 'idle') return;
+    if (game.currentIsland === 'wild' && captureMode) { onWildMouseMove(e); return; }
+    if (!mouseDownId || game.phase !== 'idle' || game.currentIsland !== 'lab') return;
     mouseMoved = true;
     const held = Date.now() - mouseDownTime;
     if (held > 300 && !isDragging) {
@@ -717,6 +950,7 @@ _renderer.domElement.addEventListener('mousemove', (e) => {
 });
 
 _renderer.domElement.addEventListener('mouseup', (e) => {
+    if (game.currentIsland === 'wild' && captureMode) { onWildMouseUp(e); return; }
     if (isDragging && dragState) {
         _controls.enabled = true;
         const entity = displayEntities.get(dragState.creatureId);
@@ -1554,10 +1788,8 @@ function startGridBattle() {
     const team = arenaState.selectedTeam.map(id => game.inventory.find(c => c.id === id)).filter(Boolean);
     if (!team.length) return;
     const mode = arenaState.mode;
-    const entry = [5, 15, 40][mode === 1 ? 0 : mode === 3 ? 1 : 2];
-    if (game.coins < entry) { showToast('金币不足!'); return; }
-    game.coins -= entry;
-    arenaState.entry = entry;
+    // 竞技场免费入场 — 玩家已承担受伤/死亡风险
+    arenaState.entry = 0;
     arenaState.currentWave = 1;
     // Use chosen NPCs from 3-pick-1 selection (or generate fallback)
     const npcTeam = arenaState.chosenNPCs || [generateNPC(30)];
@@ -1587,7 +1819,6 @@ function startGridBattle() {
     [...pUnits, ...nUnits].forEach(u => createOverhead(u));
     arenaState.step = 'battle';
     arenaState.round = 1;
-    arenaState.entry = entry;
     updateRoundIndicator();
     setTimeout(() => runGridRound(), bDelay(800));
 }
@@ -1637,7 +1868,8 @@ function runGridRound() {
         if (!target) { nextAction(); return; }
 
         showActiveRing(unit);
-        // Mana regen each action (MewGenics: INT → mana regen)
+        try {
+        // Mana regen each action
         unit.mana = Math.min(unit.stats.maxMana || 99, (unit.mana || 0) + (unit.stats.manaRegen || 1));
         // Tick DOT damage
         const dotDmg = tickBuffs(unit.buffs);
@@ -1645,6 +1877,7 @@ function runGridRound() {
         if (unit.hp <= 0) { unit.alive = false; playDeathEffect(unit); nextAction(); return; }
 
         const skill = npcChooseSkill(unit.skills, unit.hp, unit.maxHP, target.hp, target.buffs, unit.mana || 0);
+        if (!skill) { console.error('No skill available for unit', unit); nextAction(); return; }
         const result = applySkillEffect(skill, unit.creature, target.creature, unit.stats, target.stats, unit.hp, target.hp, unit.buffs, target.buffs);
         target.hp = Math.max(0, target.hp - result.dmg);
         unit.hp = Math.min(unit.maxHP, unit.hp + (result.heal || 0) - (result.selfDmg || 0));
@@ -1694,6 +1927,7 @@ function runGridRound() {
             unit.skills.forEach(s => { if (s.cd > 0) s.cd--; });
             setTimeout(nextAction, bDelay(200));
         });
+        } catch(e) { console.error('Battle action error:', e); setTimeout(nextAction, 200); }
     }
     nextAction();
 }
@@ -1904,7 +2138,7 @@ function renderArenaMenu() {
         panel.innerHTML = `<div class="arena-title">选择对手</div>
             <div style="font-size:12px; color:#94a3b8; margin-bottom:12px;">你的战力: ${arenaState.playerPower} | 选择一个对手</div>
             <div class="arena-select">${oppsHtml}</div>
-            <button class="btn-arena-back" onclick="arenaState.step='select-team';renderArenaMenu()">返回选队</button>`;
+            <button class="btn-arena-back" onclick="goBackToTeamSelect()">返回选队</button>`;
 
     } else if (arenaState.step === 'result-win') {
         panel.innerHTML = `<div class="arena-result-title" style="color:#fbbf24">胜利!</div>
@@ -1941,6 +2175,12 @@ function chooseOpponent(idx) {
     startGridBattle();
 }
 window.chooseOpponent = chooseOpponent;
+
+function goBackToTeamSelect() {
+    arenaState.step = 'select-team';
+    renderArenaMenu();
+}
+window.goBackToTeamSelect = goBackToTeamSelect;
 
 function resetCooldowns() {
     game.inventory.forEach(c => c.cooldown = false);
@@ -2038,31 +2278,112 @@ function openFacilityPanel(type) {
             </div>
         </div>`;
     } else if (type === 'cloner') {
-        // Find creature currently being dragged to cloner (if any), or show general info
-        html = `<div style="background:#1e293b;border:3px solid #22d3ee;border-radius:16px;padding:20px;max-width:350px;width:90%;text-align:center;">
-            <div style="font-size:18px;font-weight:900;color:#22d3ee;margin-bottom:12px;">📋 DNA复制机</div>
-            <div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">将小黏兽拖入复制机即可复制。<br>副本有30%概率出现复制失真(缺陷)。</div>
-            <div style="font-size:11px;color:#64748b;">费用 = 10g + 基础价值×2</div>
-            <button onclick="closeFacilityPanel()" style="margin-top:12px;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:900;cursor:pointer;border:2px solid #334155;background:#0f172a;color:#94a3b8;">关闭</button>
-        </div>`;
-    } else if (type === 'healer') {
-        // Show all injured creatures
-        const injured = game.inventory.filter(c => c.injuries && c.injuries.length > 0);
-        const itemsHtml = injured.length > 0 ? injured.map(c => {
+        // 复制机：显示所有可复制的生物列表，每只显示费用和风险
+        const creatures = game.inventory.filter(c => c.age >= 1);
+        const listHtml = creatures.length > 0 ? creatures.map(c => {
             const pal = PALETTES[c.dna[0]];
-            return c.injuries.map(injId => {
+            const stats = calcCreatureStats(c);
+            const age = getAgeStage(c.age ?? 0);
+            const cost = getCloneCost(c);
+            const canAfford = game.coins >= cost && game.inventory.length < 8;
+            return `<div style="display:flex;align-items:center;gap:10px;padding:10px;background:#0f172a;border-radius:10px;margin:6px 0;border:1px solid #1e3a5f;">
+                <div style="flex:1;">
+                    <div style="font-weight:900;color:${pal.border};font-size:13px;">${pal.name}</div>
+                    <div style="font-size:10px;color:#64748b;">${age.icon}${age.name} · ${CHASSIS_ROLE[c.dna[1]]?.role||''} · 战力${stats.total}</div>
+                    <div style="font-size:10px;color:#94a3b8;margin-top:2px;">
+                        ${Object.values(c.mutations||{}).filter(Boolean).map(m=>'🦠'+m.n).join(' ')||'无突变'}
+                        ${(c.injuries||[]).length > 0 ? ' · 🩹×'+(c.injuries||[]).length : ''}
+                        ${(c.defects||[]).length > 0 ? ' · ⚠×'+(c.defects||[]).length : ''}
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:14px;font-weight:900;color:#fbbf24;">${cost}g</div>
+                    <button onclick="doCloneFromPanel(${c.id})" style="margin-top:4px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:900;cursor:pointer;border:1px solid #22d3ee;background:#164e63;color:#22d3ee;" ${canAfford?'':'disabled'}>复制</button>
+                </div>
+            </div>`;
+        }).join('') : '<div style="font-size:12px;color:#64748b;padding:12px;">没有可复制的生物。</div>';
+
+        html = `<div style="background:#1e293b;border:3px solid #22d3ee;border-radius:16px;padding:20px;max-width:420px;width:90%;">
+            <div style="text-align:center;margin-bottom:12px;">
+                <div style="font-size:18px;font-weight:900;color:#22d3ee;">📋 DNA复制机</div>
+                <div style="font-size:11px;color:#64748b;margin-top:4px;">复制选定生物(含年龄/突变/受伤)</div>
+            </div>
+            <div style="background:#0a0f1a;border-radius:8px;padding:8px 6px;margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;font-size:10px;color:#475569;padding:0 4px;margin-bottom:4px;">
+                    <span>⚠ 30%概率复制失真(随机缺陷)</span>
+                    <span>💰 ${game.coins}g</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:10px;color:#475569;padding:0 4px;">
+                    <span>📦 库存 ${game.inventory.length}/8</span>
+                    <span>副本战斗记忆清零</span>
+                </div>
+            </div>
+            <div style="max-height:280px;overflow-y:auto;">${listHtml}</div>
+            <div style="text-align:center;margin-top:10px;">
+                <button onclick="closeFacilityPanel()" style="padding:8px 24px;border-radius:10px;font-size:13px;font-weight:900;cursor:pointer;border:2px solid #334155;background:#0f172a;color:#94a3b8;">关闭</button>
+            </div>
+        </div>`;
+
+    } else if (type === 'healer') {
+        // 治疗仪：显示所有生物（受伤的突出显示），每个受伤可单独治疗
+        const allCreatures = game.inventory;
+        const listHtml = allCreatures.length > 0 ? allCreatures.map(c => {
+            const pal = PALETTES[c.dna[0]];
+            const stats = calcCreatureStats(c);
+            const age = getAgeStage(c.age ?? 0);
+            const hasInjury = (c.injuries||[]).length > 0;
+            const hasDefect = (c.defects||[]).length > 0;
+
+            if (!hasInjury && !hasDefect) {
+                return `<div style="padding:8px 10px;background:#0f172a;border-radius:8px;margin:4px 0;opacity:0.5;border:1px solid #1e293b;">
+                    <span style="font-size:12px;color:${pal.border};font-weight:900;">${pal.name}</span>
+                    <span style="font-size:10px;color:#22c55e;margin-left:8px;">✓ 健康</span>
+                </div>`;
+            }
+
+            const injuryRows = (c.injuries||[]).map(injId => {
                 const inj = INJURIES.find(i => i.id === injId);
-                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#0f172a;border-radius:6px;margin:4px 0;">
-                    <span style="font-size:11px;"><span style="color:${pal.border}">${pal.name}</span> - <span style="color:#fca5a5">${inj?.n||injId}</span></span>
-                    <button onclick="doHealFromPanel('${c.id}','${injId}')" style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:900;cursor:pointer;border:1px solid #4ade80;background:#14532d;color:#4ade80;" ${game.coins < HEALER_COST_PER_INJURY ? 'disabled' : ''}>治疗 ${HEALER_COST_PER_INJURY}g</button>
+                const fxText = inj ? Object.entries(inj.fx).map(([k,v])=>`${STAT_LABELS_7[STAT_NAMES_7.indexOf(k)]||k}${v}`).join(' ') : '';
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
+                    <span style="font-size:11px;">
+                        <span style="color:#fca5a5;">🩹 ${inj?.n||injId}</span>
+                        <span style="color:#64748b;margin-left:4px;">(${fxText})</span>
+                    </span>
+                    <button onclick="doHealFromPanel('${c.id}','${injId}')" style="padding:3px 10px;border-radius:5px;font-size:10px;font-weight:900;cursor:pointer;border:1px solid #4ade80;background:#14532d;color:#4ade80;" ${game.coins < HEALER_COST_PER_INJURY ? 'disabled' : ''}>治疗 ${HEALER_COST_PER_INJURY}g</button>
                 </div>`;
             }).join('');
-        }).join('') : '<div style="font-size:12px;color:#64748b;">目前没有受伤的小黏兽。</div>';
 
-        html = `<div style="background:#1e293b;border:3px solid #4ade80;border-radius:16px;padding:20px;max-width:380px;width:90%;text-align:center;">
-            <div style="font-size:18px;font-weight:900;color:#4ade80;margin-bottom:12px;">💊 DNA治疗仪</div>
-            <div style="text-align:left;">${itemsHtml}</div>
-            <button onclick="closeFacilityPanel()" style="margin-top:12px;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:900;cursor:pointer;border:2px solid #334155;background:#0f172a;color:#94a3b8;">关闭</button>
+            const defectRows = (c.defects||[]).map(defId => {
+                const def = BIRTH_DEFECTS.find(d => d.id === defId);
+                return `<div style="padding:4px 0;font-size:11px;color:#f59e0b;">⚠ ${def?.n||defId} <span style="color:#64748b;">(无法治疗)</span></div>`;
+            }).join('');
+
+            return `<div style="padding:10px;background:#0f172a;border-radius:10px;margin:6px 0;border:1px solid ${hasInjury?'#ef4444':'#f59e0b'}30;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="font-weight:900;color:${pal.border};font-size:13px;">${pal.name}</span>
+                    <span style="font-size:10px;color:#64748b;">${age.icon}${age.name} · 战力${stats.total}</span>
+                </div>
+                ${injuryRows}${defectRows}
+                ${c.cooldown ? '<div style="font-size:10px;color:#f59e0b;margin-top:4px;">⏳ 重伤冷却中(治疗可解除)</div>' : ''}
+            </div>`;
+        }).join('') : '<div style="font-size:12px;color:#64748b;padding:12px;">没有生物。</div>';
+
+        const injuredCount = allCreatures.filter(c => (c.injuries||[]).length > 0).length;
+        const totalInjuries = allCreatures.reduce((s,c) => s + (c.injuries||[]).length, 0);
+
+        html = `<div style="background:#1e293b;border:3px solid #4ade80;border-radius:16px;padding:20px;max-width:420px;width:90%;">
+            <div style="text-align:center;margin-bottom:12px;">
+                <div style="font-size:18px;font-weight:900;color:#4ade80;">💊 DNA治疗仪</div>
+                <div style="font-size:11px;color:#64748b;margin-top:4px;">修复受伤 · 缺陷无法治疗</div>
+            </div>
+            <div style="background:#0a0f1a;border-radius:8px;padding:8px 10px;margin-bottom:10px;display:flex;justify-content:space-between;font-size:11px;">
+                <span style="color:#fca5a5;">🩹 受伤: ${totalInjuries}处 (${injuredCount}只)</span>
+                <span style="color:#fbbf24;">💰 ${game.coins}g · 每处${HEALER_COST_PER_INJURY}g</span>
+            </div>
+            <div style="max-height:300px;overflow-y:auto;">${listHtml}</div>
+            <div style="text-align:center;margin-top:10px;">
+                <button onclick="closeFacilityPanel()" style="padding:8px 24px;border-radius:10px;font-size:13px;font-weight:900;cursor:pointer;border:2px solid #334155;background:#0f172a;color:#94a3b8;">关闭</button>
+            </div>
         </div>`;
     }
 
@@ -2093,6 +2414,26 @@ function doHealFromPanel(creatureId, injuryId) {
     }
 }
 window.doHealFromPanel = doHealFromPanel;
+
+function doCloneFromPanel(creatureId) {
+    const creature = game.inventory.find(c => c.id === creatureId);
+    if (!creature) return;
+    const cost = getCloneCost(creature);
+    if (game.coins < cost) { showToast(`费用不足! 需要${cost}g`); return; }
+    if (game.inventory.length >= 8) { showToast('库存已满!'); return; }
+    const clone = cloneCreature(creature);
+    if (clone) {
+        game.inventory.push(clone);
+        const hasNewDefect = clone.defects.length > creature.defects.length;
+        showToast(hasNewDefect
+            ? `复制完成...但有失真: ${BIRTH_DEFECTS.find(d=>d.id===clone.defects[clone.defects.length-1])?.n||'未知缺陷'}`
+            : '复制完成! 完美副本。');
+        refreshDisplayCreatures();
+        renderHUD();
+        openFacilityPanel('cloner'); // 刷新面板
+    }
+}
+window.doCloneFromPanel = doCloneFromPanel;
 
 function doSkipDay() {
     if (game.phase !== 'idle') return;
@@ -2143,6 +2484,7 @@ window.doSkipDay = doSkipDay;
 function finishSkipDay(showSmuggler) {
     game.phase = 'idle';
     refreshDisplayCreatures();
+    if (wildInitialized) refreshWildCreatures(); // 刷新野外怪
     if (selectedCreatureId) renderCreaturePanel();
     renderHUD();
     if (showSmuggler) openSmugglerShop();
@@ -2270,12 +2612,15 @@ const clock = new THREE.Clock();
 function animate() {
     requestAnimationFrame(animate);
     const dt = clock.getDelta();
-    updateWandering(dt);
-    updateBlenderVisuals();
-    updateBlenderLabel();
-    updateFacilityLabels();
-    // 平台发光环旋转
-    ringMesh.rotation.z = clock.getElapsedTime() * 0.3;
+    if (game.currentIsland === 'lab') {
+        updateWandering(dt);
+        updateBlenderVisuals();
+        updateBlenderLabel();
+        updateFacilityLabels();
+        ringMesh.rotation.z = clock.getElapsedTime() * 0.3;
+    } else if (game.currentIsland === 'wild') {
+        updateWildWandering();
+    }
     _controls.update(); _renderer.render(_scene, _camera);
 }
 animate();
