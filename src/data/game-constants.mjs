@@ -214,12 +214,12 @@ export const SYNERGIES = [
 // =====================================================================
 
 export const ARENA_DIFFICULTY = [
-    { key: 'weak',   label: '弱',   powerMult: [0.7, 0.9], rewardGold: [10, 20], rewardRP: 3,  catalystChance: 0,    fragmentChance: 0.15 },
-    { key: 'even',   label: '均衡', powerMult: [0.9, 1.1], rewardGold: [20, 35], rewardRP: 8,  catalystChance: 0.10, fragmentChance: 0.30 },
-    { key: 'strong', label: '强',   powerMult: [1.1, 1.3], rewardGold: [35, 50], rewardRP: 15, catalystChance: 0.25, fragmentChance: 0.50 },
+    { key: 'weak',   label: '弱',   powerMult: [0.7, 0.9], rewardGold: [10, 20], rewardRP: 3,  catalystChance: 0.05 },
+    { key: 'even',   label: '均衡', powerMult: [0.9, 1.1], rewardGold: [20, 35], rewardRP: 8,  catalystChance: 0.15 },
+    { key: 'strong', label: '强',   powerMult: [1.1, 1.3], rewardGold: [35, 50], rewardRP: 15, catalystChance: 0.30 },
 ];
 
-export const ARENA_LOSS_REWARD = { goldMin: 5, goldMax: 10, rp: 3, fragmentChance: 0.10 }; // 输了也有10%碎片
+export const ARENA_LOSS_REWARD = { goldMin: 5, goldMax: 10, rp: 3 };
 
 // 受伤等级 (被击倒时roll)
 export const INJURY_TIERS = [

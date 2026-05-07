@@ -398,7 +398,7 @@ const PLAYERS = {
 // ============================================================
 function run(pt) {
     globalBreedPressure = 0;
-    const s = { day:0, coins:120, inv:[], breeds:0, smugDays:0 };
+    const s = { day:0, coins:120, inv:[], breeds:0, smugDays:0, catalysts:0 };
     // 初始: 2只壮年(含1个fine CA) + 1只少年
     s.inv.push(mkCreature(['TA','TT','CT','AA','AA','AA'], 3));
     s.inv.push(mkCreature(['AC','CA','AA','AT','AA','AT'], 3));
@@ -419,7 +419,7 @@ function run(pt) {
                     if (s.coins>=cost && s.inv.length<=8) {
                         s.coins -= cost;
                         s.inv = s.inv.filter(c => c.id!==a.id && c.id!==b.id);
-                        const cat = pt.cat && s.coins > 30 ? 'mutate' : null;
+                        const cat = pt.cat && s.catalysts > 0 ? (s.catalysts--, 'mutate') : null;
                         const child = breed(a, b, cat);
                         s.inv.push(child);
                         s.breeds++;
@@ -448,16 +448,14 @@ function run(pt) {
                 s.coins += rw[0] + Math.floor(Math.random()*(rw[1]-rw[0]));
                 if (won) {
                     log.wins++; log.excite+=8;
-                    // 基因碎片掉落 — 战斗直接产出进步感
-                    const fragChance = {weak:0.15, even:0.30, strong:0.50}[pt.diff];
-                    if (Math.random() < fragChance) {
-                        log.excite += 12; // 碎片=强进步感
-                        log.consNP = 0; // 打断连续无进步
+                    // 催化剂掉落 — 用于搅拌机"加注"
+                    const catChance = {weak:0.05, even:0.15, strong:0.30}[pt.diff];
+                    if (Math.random() < catChance) {
+                        s.catalysts++; // 催化剂=搅拌机加注道具
+                        log.excite += 5;
                     }
                 } else {
                     log.frust+=3;
-                    // 输了也有10%碎片(败者补偿, 不是空气补贴, 是"战斗中发现的残余")
-                    if (Math.random() < 0.10) { log.excite += 5; }
                 }
                 s.inv = s.inv.filter(c => !c.dead);
             }
