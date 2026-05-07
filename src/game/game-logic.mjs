@@ -185,49 +185,147 @@ function stepMutate(gene, direction) {
 }
 
 // =====================================================================
-// 🧬 遗传算法 — 战斗记忆遗传
+// 🧬 遗传算法 — MewGenics式对数收益 + 多维经验 + 压力释放
 // =====================================================================
 
-function inheritGene(geneA, geneB, upgradeChance) {
+/**
+ * 数学模型核心:
+ *
+ * 1. stimCurve(x) = (1 + 0.01x) / (2 + 0.01x)  (MewGenics Stimulation曲线)
+ *    - 对数收益: 前50点经验回报大, 后面递减
+ *
+ * 2. 多维经验值 = log2(战斗经验) + log2(血统深度) + log2(父母品质) + 年龄成熟度
+ *    - 每种玩法都能积累经验, 不是只有战斗
+ *
+ * 3. 压力释放阀 = 1 - e^(-连续失败次数/τ)  (指数CDF, τ=4)
+ *    - 连续繁殖无进步时概率自然上升
+ *    - 成功后归零 → 形成波浪形"紧张→释放"节奏
+ *
+ * 4. 稀有度难度递增 = common→fine: ×1.0, fine→rare: ×0.6, rare→legendary: ×0.25
+ *    - 越高越难, 后期需要更多投资
+ */
+
+let breedPressure = 0; // 连续繁殖无进步计数
+
+function stimCurve(x) { return (1 + 0.01 * x) / (2 + 0.01 * x); }
+function pressureCurve(p) { return 1 - Math.exp(-p / 4); }
+
+const RARITY_DIFFICULTY = { common: 1.0, fine: 0.6, rare: 0.25, legendary: 0.08 };
+const AGE_BREED_QUALITY = [0, 5, 8, 12, 6, 2]; // 各年龄对繁殖质量的贡献
+const BASE_UPGRADE_RATE = 0.22;
+
+function calcBreedExperience(parentA, parentB) {
+    const memA = parentA.battleMemory || {};
+    const memB = parentB.battleMemory || {};
+
+    // 战斗经验
+    const battleExp = (memA.wins||0)*8 + (memB.wins||0)*8
+        + (memA.damageDealt||0)/15 + (memB.damageDealt||0)/15
+        + (memA.damageTaken||0)/15 + (memB.damageTaken||0)/15
+        + (memA.dodged||0)*2 + (memB.dodged||0)*2;
+
+    // 血统深度 (id越大=越后代)
+    const lineageScore = Math.min(30, (parentA.id + parentB.id) / 6);
+
+    // 父母表达品质
+    const qualityA = (parentA.expression||[]).reduce((s,e) => s+e, 0) / 6;
+    const qualityB = (parentB.expression||[]).reduce((s,e) => s+e, 0) / 6;
+    const qualityBonus = (qualityA + qualityB) * 8;
+
+    // 年龄成熟度
+    const ageBonus = Math.max(AGE_BREED_QUALITY[parentA.age]||0, AGE_BREED_QUALITY[parentB.age]||0);
+
+    return Math.log2(1 + battleExp) + Math.log2(1 + lineageScore * 3) + Math.log2(1 + qualityBonus) + ageBonus * 0.3;
+}
+
+function inheritGene(geneA, geneB, parentA, parentB) {
     const rarA = getRarityIndex(getGeneRarity(geneA));
     const rarB = getRarityIndex(getGeneRarity(geneB));
     const better = rarA >= rarB ? geneA : geneB;
     const weaker = rarA >= rarB ? geneB : geneA;
+
+    const exp = calcBreedExperience(parentA, parentB);
+    const betterProb = stimCurve(exp); // 50%~75% 选好基因
+
+    const baseGene = Math.random() < betterProb ? better : weaker;
+
+    // 年龄/稀有度/经验/压力 → 升级概率
+    const ageFactor = Math.min(
+        (AGE_BREED_QUALITY[parentA.age]||1) / 12,
+        (AGE_BREED_QUALITY[parentB.age]||1) / 12
+    );
+    const rarDiff = RARITY_DIFFICULTY[getGeneRarity(better)] || 0.5;
+    const pressureBoost = pressureCurve(breedPressure) * 0.15;
+    const upgradeProb = BASE_UPGRADE_RATE * stimCurve(exp) * Math.max(0.1, ageFactor) * rarDiff + pressureBoost;
+
+    // 降级概率 (老年/暮年, 经验可部分抵消)
+    const maxDegrade = Math.max(
+        getAgeStage(parentA.age).degradeChance || 0,
+        getAgeStage(parentB.age).degradeChance || 0
+    );
+    const degradeProb = maxDegrade * (1 - stimCurve(exp) * 0.5);
+
     const roll = Math.random();
-    if (roll < 0.42) return better;
-    if (roll < 0.60) return weaker;
-    if (roll < 0.72) return randomGeneOfRarity(getGeneRarity(Math.random() < 0.5 ? better : weaker));
-    if (roll < 0.72 + upgradeChance) return stepMutate(better, +1);
-    if (roll < 0.72 + upgradeChance + 0.08) return stepMutate(weaker, -1);
-    return better;
+    if (roll < upgradeProb) return stepMutate(better, +1);
+    if (roll < upgradeProb + degradeProb) return stepMutate(weaker, -1);
+    if (Math.random() < 0.12) return randomGeneOfRarity(getGeneRarity(baseGene));
+    return baseGene;
 }
 
-// 战斗记忆影响表达 (核心创新)
+// 表达遗传 — 经验加权 + sqrt记忆加成
 function inheritExpressionWithMemory(exprA, exprB, geneIdx, parentA, parentB) {
-    let base = Math.random() < 0.5 ? exprA : exprB;
-    base += (Math.random() - 0.5) * 0.15;
+    const exp = calcBreedExperience(parentA, parentB);
+    const bias = stimCurve(exp);
 
+    const hi = Math.max(exprA, exprB);
+    const lo = Math.min(exprA, exprB);
+    let base = lo + (hi - lo) * bias;
+    base += (Math.random() - 0.5) * 0.12;
+
+    // 战斗记忆→对应属性的sqrt加成
     const memA = parentA.battleMemory || {};
     const memB = parentB.battleMemory || {};
-    const mem = {
-        damageDealt: (memA.damageDealt || 0) + (memB.damageDealt || 0),
-        damageTaken: (memA.damageTaken || 0) + (memB.damageTaken || 0),
-        healed: (memA.healed || 0) + (memB.healed || 0),
-        dodged: (memA.dodged || 0) + (memB.dodged || 0),
-        wins: (memA.wins || 0) + (memB.wins || 0)
+    const dd = (memA.damageDealt||0)+(memB.damageDealt||0);
+    const dt = (memA.damageTaken||0)+(memB.damageTaken||0);
+    const h = (memA.healed||0)+(memB.healed||0);
+    const dg = (memA.dodged||0)+(memB.dodged||0);
+    const sqrtBonus = {
+        1: Math.sqrt(dt/50)*0.12,
+        2: Math.sqrt(dg/5)*0.12,
+        3: Math.sqrt(dd/50)*0.12,
+        4: Math.sqrt(h/25)*0.12,
+        5: Math.sqrt((dd+dg)/80)*0.08,
     };
+    base += Math.min(0.2, sqrtBonus[geneIdx] || 0);
 
-    // gene[1]体型→CON, gene[2]头部→SPD, gene[3]侧翼→STR, gene[4]背部→INT, gene[5]花纹→DEX
-    const memoryMap = {
-        1: Math.min(0.15, mem.damageTaken / 200),
-        2: Math.min(0.15, mem.dodged / 20),
-        3: Math.min(0.15, mem.damageDealt / 200),
-        4: Math.min(0.15, mem.healed / 100),
-        5: Math.min(0.10, (mem.damageDealt + mem.dodged) / 300)
-    };
-    base += memoryMap[geneIdx] || 0;
-    base += Math.min(0.05, mem.wins * 0.01); // 胜场加成
-    return Math.max(0, Math.min(0.999, base));
+    const ageMod = Math.min(
+        getAgeStage(parentA.age).blendExprMod,
+        getAgeStage(parentB.age).blendExprMod
+    );
+    base *= ageMod;
+
+    return Math.max(0.05, Math.min(0.999, base));
+}
+
+/** 繁殖后调用: 判断是否有进步, 更新压力 */
+export function updateBreedPressure(child, parentA, parentB) {
+    let improved = false;
+    for (let i = 0; i < 6; i++) {
+        if (getRarityIndex(getGeneRarity(child.dna[i])) > Math.max(
+            getRarityIndex(getGeneRarity(parentA.dna[i])),
+            getRarityIndex(getGeneRarity(parentB.dna[i]))
+        )) { improved = true; break; }
+    }
+    if (!improved) {
+        // 检查表达提升
+        for (let i = 0; i < 6; i++) {
+            if (child.expression[i] - Math.max(parentA.expression[i], parentB.expression[i]) > 0.08) {
+                improved = true; break;
+            }
+        }
+    }
+    if (improved) { breedPressure = 0; } else { breedPressure++; }
+    return improved;
 }
 
 // 基因兼容性检查
@@ -317,31 +415,23 @@ function applyAgeDegradation(childDNA, parentA, parentB) {
 
 // 主繁殖函数
 export function breedCreatures(parentA, parentB, catalyst) {
-    const upgradeChance = catalyst === 'mutate' ? 0.14 : 0.07;
-
     // 基因兼容性
     const compat = checkGeneCompatibility(parentA, parentB);
 
-    // DNA遗传
+    // DNA遗传 — 使用新的对数收益+压力释放模型
     const childDNA = [];
     const childExpr = [];
     for (let i = 0; i < 6; i++) {
         if ((game.research.gene_lock || game.upgrades?.geneLock) && game.lockedGeneIndex === i) {
             childDNA.push(Math.random() < 0.5 ? parentA.dna[i] : parentB.dna[i]);
         } else {
-            childDNA.push(inheritGene(parentA.dna[i], parentB.dna[i], upgradeChance));
+            childDNA.push(inheritGene(parentA.dna[i], parentB.dna[i], parentA, parentB));
         }
 
-        // 表达: 战斗记忆 + 年龄修正
+        // 表达: 经验加权lerp + sqrt记忆加成 (年龄修正已内置)
         let expr = inheritExpressionWithMemory(
             parentA.expression[i], parentB.expression[i], i, parentA, parentB
         );
-
-        // 年龄修正: 取父母中更差的修正
-        const ageA = getAgeStage(parentA.age ?? 3);
-        const ageB = getAgeStage(parentB.age ?? 3);
-        const blendMod = Math.min(ageA.blendExprMod, ageB.blendExprMod);
-        expr *= blendMod;
 
         // 兼容性修正
         if (i === 0) { // 元素基因
