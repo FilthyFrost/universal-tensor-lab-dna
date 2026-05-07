@@ -2105,10 +2105,13 @@ function doSkipDay() {
     requestAnimationFrame(() => overlay.style.opacity = '1');
 
     setTimeout(() => {
-        const deaths = skipDay();
+        const result = skipDay();
+        const deaths = result.deaths || result; // 兼容新旧格式
+        const labIncome = result.labIncome || 0;
 
         // 构建日报
         let report = `<div style="font-size:22px;margin-bottom:16px;">☀ 第 ${game.dayCount} 天</div>`;
+        if (labIncome > 0) report += `<div style="font-size:13px;color:#fbbf24;margin-bottom:6px;">💰 实验室日报收入: +${labIncome}g</div>`;
         // 成长变化
         const changes = [];
         for (const c of game.inventory) {

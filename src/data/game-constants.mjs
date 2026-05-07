@@ -214,12 +214,12 @@ export const SYNERGIES = [
 // =====================================================================
 
 export const ARENA_DIFFICULTY = [
-    { key: 'weak',   label: '弱',   powerMult: [0.7, 0.9], rewardGold: [10, 20], rewardRP: 3,  catalystChance: 0 },
-    { key: 'even',   label: '均衡', powerMult: [0.9, 1.1], rewardGold: [20, 35], rewardRP: 8,  catalystChance: 0.10 },
-    { key: 'strong', label: '强',   powerMult: [1.1, 1.3], rewardGold: [35, 50], rewardRP: 15, catalystChance: 0.25 },
+    { key: 'weak',   label: '弱',   powerMult: [0.7, 0.9], rewardGold: [10, 20], rewardRP: 3,  catalystChance: 0,    fragmentChance: 0.15 },
+    { key: 'even',   label: '均衡', powerMult: [0.9, 1.1], rewardGold: [20, 35], rewardRP: 8,  catalystChance: 0.10, fragmentChance: 0.30 },
+    { key: 'strong', label: '强',   powerMult: [1.1, 1.3], rewardGold: [35, 50], rewardRP: 15, catalystChance: 0.25, fragmentChance: 0.50 },
 ];
 
-export const ARENA_LOSS_REWARD = { goldMin: 5, goldMax: 10, rp: 3 };
+export const ARENA_LOSS_REWARD = { goldMin: 5, goldMax: 10, rp: 3, fragmentChance: 0.10 }; // 输了也有10%碎片
 
 // 受伤等级 (被击倒时roll)
 export const INJURY_TIERS = [
@@ -233,11 +233,14 @@ export const INJURY_TIERS = [
 // 📋 设施费用
 // =====================================================================
 
-export const CLONER_BASE_COST = 10;
-export const CLONER_VALUE_MULT = 2;    // 总费用 = base + baseValue × mult
+export const CLONER_BASE_COST = 5;
+export const CLONER_VALUE_MULT = 0.8;   // 总费用 = base + baseValue × mult (降低让复制机可用)
 export const CLONER_DEFECT_CHANCE = 0.30;
 
-export const HEALER_COST_PER_INJURY = 30;
+export const HEALER_COST_PER_INJURY = 15; // 从30降到15, 降低战败恢复成本
+
+// 跳过今天时每只成年+生物的日报收入
+export const DAILY_LAB_INCOME_PER_CREATURE = 2;
 
 export const SMUGGLER_VISIT_CHANCE = 0.25;      // 每回合25%概率出现
 export const SMUGGLER_MIN_INTERVAL = 3;          // 最少间隔3回合

@@ -12,7 +12,7 @@ import {
     SYNERGIES, ARENA_DIFFICULTY, ARENA_LOSS_REWARD, INJURY_TIERS,
     CLONER_BASE_COST, CLONER_VALUE_MULT, CLONER_DEFECT_CHANCE,
     HEALER_COST_PER_INJURY, SMUGGLER_PRICES,
-    FAILSAFE_CLEAN_REWARD,
+    FAILSAFE_CLEAN_REWARD, DAILY_LAB_INCOME_PER_CREATURE,
     getAgeStage
 } from '../data/game-constants.mjs';
 import { game, bumpCreatureId } from '../core/state.mjs';
@@ -546,18 +546,22 @@ export function rollInjuryTier() {
 
 export function skipDay() {
     const deaths = [];
+    let labIncome = 0;
     for (const c of game.inventory) {
         c.age = (c.age ?? 0) + 1;
         c.cooldown = false; // 重伤恢复
         if (c.age >= 6) deaths.push(c);
+        // 成年生物产出实验室日报收入(age 1-5可贡献)
+        else if (c.age >= 1) labIncome += DAILY_LAB_INCOME_PER_CREATURE;
     }
     for (const d of deaths) {
         const idx = game.inventory.indexOf(d);
         if (idx >= 0) game.inventory.splice(idx, 1);
     }
+    game.coins += labIncome;
     game.dayCount++;
     game.smuggler.daysSinceVisit++;
-    return deaths;
+    return { deaths, labIncome };
 }
 
 // =====================================================================

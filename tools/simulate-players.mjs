@@ -446,8 +446,19 @@ function run(pt) {
                     ? {weak:[10,20],even:[20,35],strong:[35,50]}[pt.diff]
                     : [5,10];
                 s.coins += rw[0] + Math.floor(Math.random()*(rw[1]-rw[0]));
-                if (won) { log.wins++; log.excite+=8; }
-                else log.frust+=3;
+                if (won) {
+                    log.wins++; log.excite+=8;
+                    // 基因碎片掉落 — 战斗直接产出进步感
+                    const fragChance = {weak:0.15, even:0.30, strong:0.50}[pt.diff];
+                    if (Math.random() < fragChance) {
+                        log.excite += 12; // 碎片=强进步感
+                        log.consNP = 0; // 打断连续无进步
+                    }
+                } else {
+                    log.frust+=3;
+                    // 输了也有10%碎片(败者补偿, 不是空气补贴, 是"战斗中发现的残余")
+                    if (Math.random() < 0.10) { log.excite += 5; }
+                }
                 s.inv = s.inv.filter(c => !c.dead);
             }
         } else if (act==='buy_wild') {
@@ -458,8 +469,10 @@ function run(pt) {
                 s.inv.push(mkCreature(wd, 3));
             }
         } else { // skip
-            for (const c of s.inv) { c.age++; c.cooldown=false; }
+            let labIncome = 0;
+            for (const c of s.inv) { c.age++; c.cooldown=false; if (c.age>=1 && c.age<6) labIncome+=2; }
             s.inv = s.inv.filter(c => c.age<6);
+            s.coins += labIncome; // 实验室日报收入
             s.smugDays++;
         }
 
